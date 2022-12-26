@@ -19,6 +19,5 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:text="Getting Downloading Link"
-        android:textColor="@color/material_dynamic_neutral70"/>
+        android:text="Getting Downloading Link"/>
 </LinearLayout>

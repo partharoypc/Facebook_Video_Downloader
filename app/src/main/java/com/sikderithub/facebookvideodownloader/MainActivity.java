@@ -15,6 +15,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 
 public class MainActivity extends AppCompatActivity {
@@ -106,20 +107,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void getFacebookData() {
-        try {
-            createFileFolder();
-            URL url = new URL(txtLink.getText().toString());
+    private void getFacebookData()  {
+        createFileFolder();
 
+        try {
+            URL url = new URL(txtLink.getText().toString());
             String host = url.getHost();
+
             if (host.contains(strName) || host.contains(strNameSecond)) {
                 Utils.showProgressDialog(activity);
             } else {
                 Utils.setToast(activity, getResources().getString(R.string.enter_valid_url));
             }
-        } catch (Exception e) {
+
+
+        }catch (Exception e){
             e.printStackTrace();
         }
+
+
+
+
     }
 
 
