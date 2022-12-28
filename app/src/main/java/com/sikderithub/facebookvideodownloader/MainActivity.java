@@ -1,22 +1,39 @@
 package com.sikderithub.facebookvideodownloader;
 
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
+import static com.sikderithub.facebookvideodownloader.Utils.RootDirectoryFacebook;
 import static com.sikderithub.facebookvideodownloader.Utils.createFileFolder;
+import static com.sikderithub.facebookvideodownloader.Utils.startDownload;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.renderscript.RenderScript;
 import android.util.Log;
 import android.util.Patterns;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.net.MalformedURLException;
+import com.karumi.dexter.Dexter;
+import com.karumi.dexter.MultiplePermissionsReport;
+import com.karumi.dexter.PermissionToken;
+
+import com.karumi.dexter.listener.PermissionRequest;
+import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+
+import java.io.IOException;
 import java.net.URL;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -38,9 +55,24 @@ public class MainActivity extends AppCompatActivity {
         txtLink = findViewById(R.id.link_text);
         btnDownloaded = findViewById(R.id.downloaded_btn);
         btnPest = findViewById(R.id.btn_paste);
-
-        createFileFolder();
+        checkPermission();
         initViews();
+
+    }
+
+    private void checkPermission(){
+        Dexter.withContext(this)
+                .withPermissions(
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ).withListener(new MultiplePermissionsListener() {
+                    @Override public void onPermissionsChecked(MultiplePermissionsReport report) {
+                        if (!report.areAllPermissionsGranted()){
+                            checkPermission();
+                        }
+                    }
+                    @Override public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {/* ... */}
+                }).check();
     }
 
     @Override
@@ -108,14 +140,14 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void getFacebookData()  {
-        createFileFolder();
-
         try {
+            createFileFolder();
             URL url = new URL(txtLink.getText().toString());
             String host = url.getHost();
 
             if (host.contains(strName) || host.contains(strNameSecond)) {
                 Utils.showProgressDialog(activity);
+                new callFacebookData().execute(txtLink.getText().toString());
             } else {
                 Utils.setToast(activity, getResources().getString(R.string.enter_valid_url));
             }
@@ -124,9 +156,6 @@ public class MainActivity extends AppCompatActivity {
         }catch (Exception e){
             e.printStackTrace();
         }
-
-
-
 
     }
 
@@ -138,17 +167,45 @@ public class MainActivity extends AppCompatActivity {
         try {
             super.onActivityResult(requestCode, resultCode, data);
             if (requestCode == 100 && resultCode == RESULT_OK) {
-                getFacebookUserData();
+                getFacebookData();
             }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
-    private void getFacebookUserData() {
 
-        Toast.makeText(activity, "Hello   Madam", Toast.LENGTH_SHORT).show();
+    class callFacebookData extends AsyncTask<String,Void, Document>{
 
+        Document facebookDocument;
+
+        @Override
+        protected Document doInBackground(String... strings) {
+            try {
+                facebookDocument = Jsoup.connect(strings[0]).get();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return facebookDocument;
+        }
+
+        @Override
+        protected void onPostExecute(Document document) {
+            Utils.hideProgressDialog(activity);
+
+            try {
+                videoUrl = document.select("meta[property=\"og:video\"]").last().attr("content");
+                if (!videoUrl.equals("")){
+                   Utils.startDownload(videoUrl,RootDirectoryFacebook,activity,"Facebook_"+ System.currentTimeMillis() + ".mp4");
+                   videoUrl = "";
+                   txtLink.setText("");
+
+                    Toast.makeText(activity, "Fuck  You", Toast.LENGTH_SHORT).show();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 

@@ -20,8 +20,8 @@ public class Utils {
     private  Context context;
 
 
-    public static String RootDirectoryFacebook = "/FacebookVideoDownloader/";
-    public static File RootDirectoryFacebookShow = new File(Environment.getExternalStorageDirectory() + "/Download/FacebookVideoDownloader");
+    public static String RootDirectoryFacebook = "/Facebook Video Downloader/";
+    public static File RootDirectoryFacebookShow = new File(Environment.getExternalStorageDirectory() + "/Download/Facebook Video Downloader");
 
     public Utils(Context mContext) {
         context = mContext;
@@ -68,21 +68,11 @@ public class Utils {
         DownloadManager.Request request = new DownloadManager.Request(uri);
         request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_MOBILE | DownloadManager.Request.NETWORK_WIFI);
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-        request.setTitle(FileName+"");
+        request.setTitle(FileName);
         request.setVisibleInDownloadsUi(true);
-        request.setDestinationInExternalPublicDir(DIRECTORY_DOWNLOADS,destinationPath+FileName);
-        ((DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(request);
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS,destinationPath+FileName);
+        ((DownloadManager)context.getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(request);
 
-        try {
-            MediaScannerConnection.scanFile(context, new String[]{new File(DIRECTORY_DOWNLOADS + "/" + destinationPath + FileName).getAbsolutePath()},
-                    null, new MediaScannerConnection.OnScanCompletedListener() {
-                        public void onScanCompleted(String path, Uri uri) {
-                        }
-                    });
-
-        }catch (Exception e){
-            e.printStackTrace();
-        }
     }
 
 
