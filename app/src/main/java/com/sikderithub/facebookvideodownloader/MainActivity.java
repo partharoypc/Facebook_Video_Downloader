@@ -15,6 +15,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -167,15 +169,16 @@ public class MainActivity extends AppCompatActivity{
                 wvPage.setVisibility(View.VISIBLE);
 
 
-                //wvPage.setWebViewClient(new WebViewClient());
+                wvPage.setWebViewClient(new Client());
+                wvPage.setWebChromeClient(new WebChromeClient());
                 //wvPage.getSettings().setDomStorageEnabled(true);
                 //wvPage.getSettings().setAllowUniversalAccessFromFileURLs(true);
 
 
                 //wvPage.getSettings().setPluginState(WebSettings.PluginState.ON);
                 wvPage.getSettings().setJavaScriptEnabled(true);
-                wvPage.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
-                wvPage.getSettings().setSupportMultipleWindows(false);
+                //wvPage.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
+                //wvPage.getSettings().setSupportMultipleWindows(false);
                 wvPage.getSettings().setSupportZoom(false);
                 wvPage.setVerticalScrollBarEnabled(false);
                 wvPage.setHorizontalScrollBarEnabled(false);
@@ -190,6 +193,14 @@ public class MainActivity extends AppCompatActivity{
             e.printStackTrace();
         }
 
+    }
+
+    class Client extends WebViewClient {
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+            Log.d("UrlClick", request.getUrl().toString());
+            return super.shouldOverrideUrlLoading(view, request);
+        }
     }
 
 
@@ -233,7 +244,6 @@ public class MainActivity extends AppCompatActivity{
                    videoUrl = "";
                    txtLink.setText("");
 
-                    Toast.makeText(activity, "Fuck  You", Toast.LENGTH_SHORT).show();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
