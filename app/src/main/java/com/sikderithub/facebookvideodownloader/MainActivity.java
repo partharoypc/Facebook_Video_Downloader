@@ -3,21 +3,23 @@ package com.sikderithub.facebookvideodownloader;
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 import static com.sikderithub.facebookvideodownloader.Utils.RootDirectoryFacebook;
 import static com.sikderithub.facebookvideodownloader.Utils.createFileFolder;
-import static com.sikderithub.facebookvideodownloader.Utils.startDownload;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.renderscript.RenderScript;
 import android.util.Log;
 import android.util.Patterns;
+import android.view.View;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,11 +37,13 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity{
 
-    private static final String TAG = "";
-    EditText txtLink;
-    TextView btnDownloaded,btnPest;
+    private static final String TAG = "MainActivity";
+    private EditText txtLink;
+    private TextView btnDownloaded,btnPest;
+    private WebView wvPage;
+    private ProgressBar pbLoading;
     private ClipboardManager clipBoard;
     private MainActivity activity;
     private String videoUrl;
@@ -52,14 +56,22 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        txtLink = findViewById(R.id.link_text);
-        btnDownloaded = findViewById(R.id.downloaded_btn);
+        txtLink = findViewById(R.id.tv_past_link);
+        btnDownloaded = findViewById(R.id.btn_download);
         btnPest = findViewById(R.id.btn_paste);
+        pbLoading = findViewById(R.id.pb_loading_wv);
+        wvPage = findViewById(R.id.wv_page);
+
+        //Check the read and write user permission
         checkPermission();
         initViews();
 
     }
 
+    /**
+     * check user permission to read and write in the external strage
+     * if permission not granted then it takes user permission
+     */
     private void checkPermission(){
         Dexter.withContext(this)
                 .withPermissions(
@@ -146,8 +158,29 @@ public class MainActivity extends AppCompatActivity {
             String host = url.getHost();
 
             if (host.contains(strName) || host.contains(strNameSecond)) {
+
+                /*
                 Utils.showProgressDialog(activity);
                 new callFacebookData().execute(txtLink.getText().toString());
+                 */
+
+                wvPage.setVisibility(View.VISIBLE);
+
+
+                //wvPage.setWebViewClient(new WebViewClient());
+                //wvPage.getSettings().setDomStorageEnabled(true);
+                //wvPage.getSettings().setAllowUniversalAccessFromFileURLs(true);
+
+
+                //wvPage.getSettings().setPluginState(WebSettings.PluginState.ON);
+                wvPage.getSettings().setJavaScriptEnabled(true);
+                wvPage.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
+                wvPage.getSettings().setSupportMultipleWindows(false);
+                wvPage.getSettings().setSupportZoom(false);
+                wvPage.setVerticalScrollBarEnabled(false);
+                wvPage.setHorizontalScrollBarEnabled(false);
+
+                wvPage.loadUrl(txtLink.getText().toString());
             } else {
                 Utils.setToast(activity, getResources().getString(R.string.enter_valid_url));
             }

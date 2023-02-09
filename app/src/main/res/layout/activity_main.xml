@@ -1,76 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity"
-    android:background="@color/white">
+    android:background="@color/white"
+    tools:context=".MainActivity">
 
-            <RelativeLayout
-                android:id="@+id/RLEdittextLayout"
+    <RelativeLayout
+        android:id="@+id/RLEdittextLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="5dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="5dp"
+        android:elevation="3dp"
+        android:padding="6dp">
+
+        <EditText
+            android:id="@+id/tv_past_link"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:background="@drawable/input_bg"
+            android:hint="Paste Link"
+            android:maxEms="50"
+            android:maxLines="1"
+            android:padding="15dp"
+            android:singleLine="true"
+            android:textColor="@color/blue_200"
+            android:textColorHint="@color/blue_200"
+            android:textSize="18sp" />
+
+
+        <LinearLayout
+            android:id="@+id/rl_download_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/tv_past_link"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <TextView
+                android:id="@+id/btn_download"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:layout_marginStart="5dp"
-                android:layout_marginEnd="5dp"
-                android:elevation="3dp"
-                android:padding="6dp">
+                android:layout_margin="4dp"
+                android:layout_weight="1"
+                android:background="@drawable/button_bg"
+                android:gravity="center"
+                android:padding="14dp"
+                android:text="Download"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
 
-                <EditText
-                    android:id="@+id/link_text"
-                    android:layout_width="match_parent"
-                    android:layout_height="55dp"
-                    android:background="@drawable/input_bg"
-                    android:hint="Paste Link"
-                    android:padding="15dp"
-                    android:singleLine="true"
-                    android:maxLines="1"
-                    android:maxEms="50"
-                    android:textColor="@color/purple_200"
-                    android:textColorHint="@color/purple_200"
-                    android:textSize="18sp"/>
+            <TextView
+                android:id="@+id/btn_paste"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:layout_weight="1"
+                android:background="@drawable/button_bg"
+                android:gravity="center"
+                android:padding="14dp"
+                android:text="Paste"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
+
+        </LinearLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@id/rl_download_layout"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="24dp">
+
+            <WebView
+                android:id="@+id/wv_page"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/pb_loading_wv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:indeterminateTint="@color/blue_700"
+                android:visibility="gone" />
+        </RelativeLayout>
 
 
-                <LinearLayout
-                    android:id="@+id/RLDownloadLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@+id/link_text"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal"
-                    android:weightSum="2">
-
-                    <TextView
-                        android:id="@+id/downloaded_btn"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_margin="4dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/button_bg"
-                        android:gravity="center"
-                        android:padding="14dp"
-                        android:text="Download"
-                        android:textAllCaps="false"
-                        android:textColor="@color/white"
-                        android:textSize="18sp"/>
-
-                    <TextView
-                        android:id="@+id/btn_paste"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_margin="4dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/button_bg"
-                        android:gravity="center"
-                        android:padding="14dp"
-                        android:text="Paste"
-                        android:textAllCaps="false"
-                        android:textColor="@color/white"
-                        android:textSize="18sp"/>
-
-                </LinearLayout>
-
-            </RelativeLayout>
+    </RelativeLayout>
 </LinearLayout>
