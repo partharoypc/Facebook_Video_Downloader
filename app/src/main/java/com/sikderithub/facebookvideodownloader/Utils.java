@@ -22,6 +22,9 @@ import android.widget.Toast;
 import android.os.Build;
 
 
+import com.arthenica.ffmpegkit.FFmpegKit;
+import com.arthenica.ffmpegkit.FFmpegSession;
+import com.arthenica.ffmpegkit.ReturnCode;
 import com.github.hiteshsondhi88.libffmpeg.ExecuteBinaryResponseHandler;
 import com.github.hiteshsondhi88.libffmpeg.FFmpeg;
 import com.github.hiteshsondhi88.libffmpeg.LoadBinaryResponseHandler;
@@ -187,6 +190,7 @@ public class Utils {
 
         //uses for com.writingminds:FFmpegAndroid:0.3.2
 
+        /*
         FFmpeg fFmpeg = FFmpeg.getInstance(context);
 
         try {
@@ -253,7 +257,7 @@ public class Utils {
             });
         } catch (FFmpegCommandAlreadyRunningException e) {
             throw new RuntimeException(e);
-        }
+        }*/
 
 
         String textOverlay = "-y -i" +
@@ -276,6 +280,26 @@ public class Utils {
                 }
             }
         });*/
+
+
+        String com = "-i "+inputPath+" -c:v mpeg4 "+outputPath;
+        FFmpegSession session = FFmpegKit.execute(com);
+        if (ReturnCode.isSuccess(session.getReturnCode())) {
+
+            // SUCCESS
+            Log.d(TAG, "addWatermark: success");
+
+        } else if (ReturnCode.isCancel(session.getReturnCode())) {
+
+            // CANCEL
+            Log.d(TAG, "addWatermark: cancel");
+
+        } else {
+
+            // FAILURE
+            Log.d(TAG, String.format("Command failed with state %s and rc %s.%s", session.getState(), session.getReturnCode(), session.getFailStackTrace()));
+
+        }
 
 
     }
