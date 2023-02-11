@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.sikderithub.facebookvideodownloader"
-        minSdk 23
+        minSdk 24
         targetSdk 32
         versionCode 1
         versionName "1.0"
@@ -40,7 +40,11 @@ dependencies {
     implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.24'
 
     implementation 'com.karumi:dexter:6.2.3'
-    implementation 'org.jsoup:jsoup:1.15.3'
+    implementation 'org.jsoup:jsoup:1.12.1'
+
+    //implementation 'nl.bravobit:android-ffmpeg:1.1.7'
+    implementation 'com.writingminds:FFmpegAndroid:0.3.2'
+    //implementation 'com.arthenica:mobile-ffmpeg-full:4.4'
 
 
 }

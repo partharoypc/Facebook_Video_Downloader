@@ -1,15 +1,23 @@
 package com.sikderithub.facebookvideodownloader;
 
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
+import static android.content.ContentValues.TAG;
 import static com.sikderithub.facebookvideodownloader.Utils.RootDirectoryFacebook;
+import static com.sikderithub.facebookvideodownloader.Utils.addWatermark;
 import static com.sikderithub.facebookvideodownloader.Utils.createFileFolder;
+
+import static com.sikderithub.facebookvideodownloader.Utils.startDownload;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -31,15 +39,18 @@ import com.karumi.dexter.PermissionToken;
 
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
+import com.sikderithub.facebookvideodownloader.models.DownloadVideo;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class MainActivity extends AppCompatActivity{
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final String TAG = "MainActivity";
     private EditText txtLink;
@@ -52,11 +63,34 @@ public class MainActivity extends AppCompatActivity{
     private String strName = "facebook";
     private String strNameSecond = "fb";
 
+    private Map<Long, DownloadVideo> downloadVideos = new HashMap<>();
+
+    private final BroadcastReceiver downloadComplete = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+
+            if (downloadVideos.containsKey(id)){
+                Log.d("videoProcess", "onReceive: download complete");
+
+                DownloadVideo downloadVideo = downloadVideos.get(id);
+
+                assert downloadVideo != null;
+                addWatermark(context, downloadVideo.getOutputPath(), RootDirectoryFacebook + "watermark_"+ System.currentTimeMillis()+".mp4");
+
+                downloadVideos.remove(id);
+            }
+        }
+    };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        registerReceiver(downloadComplete,new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+
 
         txtLink = findViewById(R.id.tv_past_link);
         btnDownloaded = findViewById(R.id.btn_download);
@@ -68,6 +102,12 @@ public class MainActivity extends AppCompatActivity{
         checkPermission();
         initViews();
 
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(downloadComplete);
     }
 
     /**
@@ -97,23 +137,14 @@ public class MainActivity extends AppCompatActivity{
         pasteText();
     }
 
+
+
     private void initViews() {
         clipBoard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
 
-        btnPest.setOnClickListener(view -> {
-            pasteText();
-        });
+        btnPest.setOnClickListener(this);
 
-        btnDownloaded.setOnClickListener(v -> {
-            String ll = txtLink.getText().toString();
-            if (ll.equals("")) {
-                Utils.setToast(activity, getResources().getString(R.string.enter_url));
-            } else if (!Patterns.WEB_URL.matcher(ll).matches()) {
-                Utils.setToast(activity, getResources().getString(R.string.enter_valid_url));
-            } else {
-                getFacebookData();
-            }
-        });
+        btnDownloaded.setOnClickListener(this);
     }
 
     private void pasteText() {
@@ -153,6 +184,7 @@ public class MainActivity extends AppCompatActivity{
     }
 
 
+
     private void getFacebookData()  {
         try {
             createFileFolder();
@@ -160,51 +192,17 @@ public class MainActivity extends AppCompatActivity{
             String host = url.getHost();
 
             if (host.contains(strName) || host.contains(strNameSecond)) {
-
-                /*
                 Utils.showProgressDialog(activity);
                 new callFacebookData().execute(txtLink.getText().toString());
-                 */
 
-                wvPage.setVisibility(View.VISIBLE);
-
-
-                wvPage.setWebViewClient(new Client());
-                wvPage.setWebChromeClient(new WebChromeClient());
-                //wvPage.getSettings().setDomStorageEnabled(true);
-                //wvPage.getSettings().setAllowUniversalAccessFromFileURLs(true);
-
-
-                //wvPage.getSettings().setPluginState(WebSettings.PluginState.ON);
-                wvPage.getSettings().setJavaScriptEnabled(true);
-                //wvPage.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
-                //wvPage.getSettings().setSupportMultipleWindows(false);
-                wvPage.getSettings().setSupportZoom(false);
-                wvPage.setVerticalScrollBarEnabled(false);
-                wvPage.setHorizontalScrollBarEnabled(false);
-
-                wvPage.loadUrl(txtLink.getText().toString());
             } else {
                 Utils.setToast(activity, getResources().getString(R.string.enter_valid_url));
             }
-
-
         }catch (Exception e){
             e.printStackTrace();
         }
 
     }
-
-    class Client extends WebViewClient {
-        @Override
-        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            Log.d("UrlClick", request.getUrl().toString());
-            return super.shouldOverrideUrlLoading(view, request);
-        }
-    }
-
-
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -218,35 +216,59 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
+    @Override
+    public void onClick(View v) {
+        int id = v.getId();
+        switch (id){
+            case R.id.btn_paste:
+                pasteText();
+                break;
+            case R.id.btn_download:
+                String ll = txtLink.getText().toString();
+                if (ll.equals("")) {
+                    Utils.setToast(activity, getResources().getString(R.string.enter_url));
+                } else if (!Patterns.WEB_URL.matcher(ll).matches()) {
+                    Utils.setToast(activity, getResources().getString(R.string.enter_valid_url));
+                } else {
+                    getFacebookData();
+                }
+
+        }
+    }
+
 
     class callFacebookData extends AsyncTask<String,Void, Document>{
 
-        Document facebookDocument;
+        Document facebookDoc;
 
         @Override
-        protected Document doInBackground(String... strings) {
+        protected Document doInBackground(String... urls) {
             try {
-                facebookDocument = Jsoup.connect(strings[0]).get();
+                facebookDoc = Jsoup.connect(urls[0]).get();
             } catch (IOException e) {
                 e.printStackTrace();
+                Log.d(TAG, "doInBackground: Error");
             }
-            return facebookDocument;
+            Log.d(TAG, "doInBackground: "+ facebookDoc.data());
+            return facebookDoc;
         }
 
         @Override
-        protected void onPostExecute(Document document) {
+        protected void onPostExecute(Document result) {
             Utils.hideProgressDialog(activity);
 
             try {
-                videoUrl = document.select("meta[property=\"og:video\"]").last().attr("content");
-                if (!videoUrl.equals("")){
-                   Utils.startDownload(videoUrl,RootDirectoryFacebook,activity,"Facebook_"+ System.currentTimeMillis() + ".mp4");
-                   videoUrl = "";
-                   txtLink.setText("");
-
+                videoUrl = result.select("meta[property=\"og:video\"]").last().attr("content");
+                Log.d(TAG, "onPostExecute: " + videoUrl);
+                if (!videoUrl.equals("")) {
+                    DownloadVideo downloadVideo = startDownload(videoUrl, RootDirectoryFacebook, activity, "facebook_"+ System.currentTimeMillis()+".mp4");
+                    downloadVideos.put(downloadVideo.getDownloadId(), downloadVideo);
+                    videoUrl = "";
+                    txtLink.setText("");
                 }
-            } catch (Exception e) {
+            } catch (NullPointerException e) {
                 e.printStackTrace();
+                Log.d(TAG, "onPostExecute: error!!!" + e.toString());
             }
         }
     }
