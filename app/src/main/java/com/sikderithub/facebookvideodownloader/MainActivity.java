@@ -2,10 +2,12 @@ package com.sikderithub.facebookvideodownloader;
 
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 import static android.content.ContentValues.TAG;
+import static android.os.Environment.DIRECTORY_DOWNLOADS;
 import static com.sikderithub.facebookvideodownloader.Utils.RootDirectoryFacebook;
 import static com.sikderithub.facebookvideodownloader.Utils.addWatermark;
 import static com.sikderithub.facebookvideodownloader.Utils.createFileFolder;
 
+import static com.sikderithub.facebookvideodownloader.Utils.fileDir;
 import static com.sikderithub.facebookvideodownloader.Utils.startDownload;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,6 +22,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
@@ -71,12 +74,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
 
             if (downloadVideos.containsKey(id)){
-                Log.d("videoProcess", "onReceive: download complete");
+                Log.d(TAG, "onReceive: download complete");
 
                 DownloadVideo downloadVideo = downloadVideos.get(id);
 
                 assert downloadVideo != null;
-                addWatermark(context, downloadVideo.getOutputPath(), RootDirectoryFacebook + "watermark_"+ System.currentTimeMillis()+".mp4");
+                String fileName = "watermark_"+ System.currentTimeMillis()+".mp4";
+                addWatermark(getApplicationContext(),
+                        downloadVideo.getOutputPath(),
+                        Environment.getExternalStorageDirectory() +
+                                "/Download" + RootDirectoryFacebook);
+
 
                 downloadVideos.remove(id);
             }
@@ -190,6 +198,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             createFileFolder();
             URL url = new URL(txtLink.getText().toString());
             String host = url.getHost();
+            Log.d(TAG, "getFacebookData: url " + url.toString());
 
             if (host.contains(strName) || host.contains(strNameSecond)) {
                 Utils.showProgressDialog(activity);
@@ -231,6 +240,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     Utils.setToast(activity, getResources().getString(R.string.enter_valid_url));
                 } else {
                     getFacebookData();
+                    //fileDir(this);
+
                 }
 
         }
@@ -243,25 +254,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         protected Document doInBackground(String... urls) {
+
             try {
                 facebookDoc = Jsoup.connect(urls[0]).get();
             } catch (IOException e) {
                 e.printStackTrace();
                 Log.d(TAG, "doInBackground: Error");
             }
-            Log.d(TAG, "doInBackground: "+ facebookDoc.data());
+            //Log.d("videoProcess", "doInBackground: "+ facebookDoc.data());
             return facebookDoc;
         }
 
         @Override
         protected void onPostExecute(Document result) {
             Utils.hideProgressDialog(activity);
+            if (result == null)
+                Log.d(TAG, "onPostExecute: result is null");
 
             try {
                 videoUrl = result.select("meta[property=\"og:video\"]").last().attr("content");
                 Log.d(TAG, "onPostExecute: " + videoUrl);
                 if (!videoUrl.equals("")) {
-                    DownloadVideo downloadVideo = startDownload(videoUrl, RootDirectoryFacebook, activity, "facebook_"+ System.currentTimeMillis()+".mp4");
+                    DownloadVideo downloadVideo = startDownload(videoUrl, activity, "facebook_"+ System.currentTimeMillis()+".mp4");
                     downloadVideos.put(downloadVideo.getDownloadId(), downloadVideo);
                     videoUrl = "";
                     txtLink.setText("");

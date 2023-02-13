@@ -2,11 +2,16 @@ package com.sikderithub.facebookvideodownloader;
 
 import static android.content.Context.DOWNLOAD_SERVICE;
 import static android.os.Environment.DIRECTORY_DOWNLOADS;
+import static android.os.Environment.getDataDirectory;
+import static android.os.Environment.getExternalStorageDirectory;
+
+import static com.arthenica.ffmpegkit.Packages.getPackageName;
 
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -25,15 +30,12 @@ import android.os.Build;
 import com.arthenica.ffmpegkit.FFmpegKit;
 import com.arthenica.ffmpegkit.FFmpegSession;
 import com.arthenica.ffmpegkit.ReturnCode;
-import com.github.hiteshsondhi88.libffmpeg.ExecuteBinaryResponseHandler;
-import com.github.hiteshsondhi88.libffmpeg.FFmpeg;
-import com.github.hiteshsondhi88.libffmpeg.LoadBinaryResponseHandler;
-import com.github.hiteshsondhi88.libffmpeg.exceptions.FFmpegCommandAlreadyRunningException;
-import com.github.hiteshsondhi88.libffmpeg.exceptions.FFmpegNotSupportedException;
 import com.sikderithub.facebookvideodownloader.models.DownloadVideo;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 
 
 public class Utils {
@@ -43,8 +45,11 @@ public class Utils {
     private static final String FFMPEG_BINARY = "ffmpeg";
 
 
-    public static String RootDirectoryFacebook = "/Facebook Video Downloader/";
-    public static File RootDirectoryFacebookShow = new File(Environment.getExternalStorageDirectory() + "/Download/Facebook Video Downloader");
+    public static String RootDirectoryFacebook = "/Facebook_Video_Downloader/";
+    public static final String DATA_DIRECTORY= getExternalStorageDirectory() +
+            "/Android/data/com.sikderithub.facebookvideodownloader/files/data" +
+            RootDirectoryFacebook;
+    public static File RootDirectoryFacebookShow = new File(Environment.getExternalStorageDirectory() + "/Download" + RootDirectoryFacebook);
 
     public Utils(Context mContext) {
         context = mContext;
@@ -85,7 +90,7 @@ public class Utils {
         }
     }
 
-    public static DownloadVideo startDownload(String downloadPath, String destinationPath, Context context, String fileName) {
+    public static DownloadVideo startDownload(String downloadPath, Context context, String fileName) {
         setToast(context, context.getResources().getString(R.string.download_started));
         Uri uri = Uri.parse(downloadPath); // Path where you want to download file.
         DownloadManager.Request request = new DownloadManager.Request(uri);
@@ -93,13 +98,14 @@ public class Utils {
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);  // This will show notification on top when downloading the file.
         request.setTitle(fileName + ""); // Title for notification.
         request.setVisibleInDownloadsUi(true);
-        request.setDestinationInExternalPublicDir(DIRECTORY_DOWNLOADS, destinationPath + fileName);  // Storage directory path
+        request.setDestinationInExternalFilesDir(context,
+                Environment.getDataDirectory().getPath() + RootDirectoryFacebook , fileName);// Storage directory path
         long downloadId = ((DownloadManager) context.getSystemService(DOWNLOAD_SERVICE)).enqueue(request); // This will start downloading
 
-        Log.d("videoProcess", "startDownload: " + DIRECTORY_DOWNLOADS + destinationPath + fileName);
+        Log.d(TAG, "startDownload: " + Environment.getDataDirectory().getPath() + RootDirectoryFacebook + fileName);
 
         try {
-            MediaScannerConnection.scanFile(context, new String[]{new File(DIRECTORY_DOWNLOADS + "/" + destinationPath + fileName).getAbsolutePath()},
+            MediaScannerConnection.scanFile(context, new String[]{new File(DIRECTORY_DOWNLOADS + "/" + fileName).getAbsolutePath()},
                     null, new MediaScannerConnection.OnScanCompletedListener() {
                         public void onScanCompleted(String path, Uri uri) {
                             Log.d("videoProcess", "onScanCompleted: " + path);
@@ -111,14 +117,13 @@ public class Utils {
             e.printStackTrace();
         }
 
-        return new DownloadVideo(DIRECTORY_DOWNLOADS + destinationPath + fileName,
+        return new DownloadVideo(DATA_DIRECTORY + fileName,
                 fileName, downloadId);
     }
 
     private static void saveWatermark(Context context) {
         Bitmap bm = BitmapFactory.decodeResource(context.getResources(), R.drawable.watermark_white);
-        String extStorageDirectory = Environment.getExternalStorageDirectory().toString();
-        File file = new File(extStorageDirectory, "watermark.png");
+        File file = new File(DATA_DIRECTORY, "watermark.png");
         if (!file.exists()) {
             try {
                 FileOutputStream outStream = new FileOutputStream(file);
@@ -132,162 +137,33 @@ public class Utils {
     }
 
     public static void addWatermark(Context context, String inputPath, String outputPath) {
-        Log.d("videoProcess", "addWatermark: is called");
-        Log.d("videoProcess", "addWatermark: inputPath: " + inputPath);
-        Log.d("videoProcess", "addWatermark: outputPath" + outputPath);
+
         saveWatermark(context);
+        String watermarkPath = DATA_DIRECTORY + "/watermark.png";
+        String outFileName = "watermark_" + System.currentTimeMillis()+".mp4";
 
-        String watermarkPath = Environment.getExternalStorageDirectory() + "/watermark.png";
-        Log.d("videoProcess", "addWatermark: watermark path " + watermarkPath);
+        /* this is working command
+        String command = "-i "+inputPath+ " -i "+watermarkPath+" -filter_complex overlay=10:10 -c:a copy "+
+                outputPath + outFileName;
+        */
+        String command = "-i "+inputPath+ " -i "+watermarkPath+
+                " -filter_complex \"[1]scale=50:25[newoverlay], " +
+                "[0][newoverlay]overlay=main_w-overlay_w-5:main_h-overlay_h-10\" " +
+                "-preset slow " +
+                "-c:a copy " +
+                outputPath + outFileName;
 
-        String[] command = new String[]{
-                FFMPEG_BINARY,
-                "-i", inputPath,
-                "-i", watermarkPath,
-                "-filter_complex", "overlay=10:10",
-                "-c:a", "copy",
-                outputPath
-        };
-        //ffmpeg -i test.mp4 -i watermark.png -filter_complex "overlay=10:10" test1.mp4
-        String[] c = new String[]{
-                "ffmpeg", "-i",
-                inputPath, "-i",
-                watermarkPath, "-filter_complex",
-                "overlay=10:10",
-                outputPath
-        };
+        Log.d(TAG, "addWatermark: command " + command);
 
-        String[] array = new String[]{
-                "-y", "-i", inputPath,
-                "-i", watermarkPath,
-                "-filter_complex",
-                "[0:v][1:v]overlay=main_w-overlay_w-10:10",
-                "-codec:a", "copy", outputPath};
-
-        //uses for bravobit-ffmpeg
-        /*
-        FFmpeg fFmpeg = FFmpeg.getInstance(context);
-        fFmpeg.execute(command, new ExecuteBinaryResponseHandler(){
-            @Override
-            public void onSuccess(String message) {
-                super.onSuccess(message);
-                Toast.makeText(context, "success", Toast.LENGTH_LONG).show();
-                Log.d("videoProcess", "onSuccess: ");
-            }
-
-            @Override
-            public void onFinish() {
-                Toast.makeText(context, "finish", Toast.LENGTH_LONG).show();
-                Log.d("videoProcess", "onFinish: ");
-            }
-
-            @Override
-            public void onFailure(String message) {
-                super.onFailure(message);
-                Log.d("videoProcess", "onFailure: " + message);
-            }
-        });*/
-
-        //uses for com.writingminds:FFmpegAndroid:0.3.2
-
-        /*
-        FFmpeg fFmpeg = FFmpeg.getInstance(context);
-
-        try {
-            fFmpeg.loadBinary(new LoadBinaryResponseHandler() {
-                @Override
-                public void onFailure() {
-                    super.onFailure();
-                    Log.d("videoProcess", "onFailure: loadBinary");
-                }
-
-                @Override
-                public void onSuccess() {
-                    super.onSuccess();
-                    Log.d("videoProcess", "onSuccess: loadBinary");
-                }
-
-                @Override
-                public void onStart() {
-                    super.onStart();
-                    Log.d("videoProcess", "onStart: loadBinary");
-
-                }
-
-                @Override
-                public void onFinish() {
-                    super.onFinish();
-                    Log.d("videoProcess", "onFinish: loadBinary");
-                }
-            });
-        } catch (FFmpegNotSupportedException e) {
-            throw new RuntimeException(e);
-        }
-
-        try {
-            fFmpeg.execute(c, new ExecuteBinaryResponseHandler() {
-                @Override
-                public void onSuccess(String message) {
-                    super.onSuccess(message);
-                    Log.d("videoProcess", "onSuccess: execute");
-                }
-
-                @Override
-                public void onProgress(String message) {
-                    super.onProgress(message);
-                }
-
-                @Override
-                public void onFailure(String message) {
-                    super.onFailure(message);
-                    Log.d("videoProcess", "onFailure: execute");
-                }
-
-                @Override
-                public void onStart() {
-                    super.onStart();
-                    Log.d("videoProcess", "onStart: execute");
-                }
-
-                @Override
-                public void onFinish() {
-                    super.onFinish();
-                    Log.d("videoProcess", "onFinish: execute");
-                }
-            });
-        } catch (FFmpegCommandAlreadyRunningException e) {
-            throw new RuntimeException(e);
-        }*/
-
-
-        String textOverlay = "-y -i" +
-                inputPath + "-vf drawtext=”fontsize=30:fontfile=cute.ttf:text=’GFG'”" +
-                ":x=w-tw-10:y=h-th-10 -c:v libx264 -preset ultrafast " +
-                outputPath;
-
-        /*
-        FFmpeg.executeAsync(command, new ExecuteCallback(){
-
-            @Override
-            public void apply(long executionId, int returnCode) {
-                if (returnCode == RETURN_CODE_SUCCESS) {
-                    Log.d("videoProcess", "apply: success");
-
-                } else if (returnCode == RETURN_CODE_CANCEL) {
-                    Log.d("videoProcess", "Async command execution cancelled by user.");
-                } else {
-                    Log.d("videoPorcess", String.format("Async command execution failed with returnCode=%d.", returnCode));
-                }
-            }
-        });*/
-
-
-        String com = "-i "+inputPath+" -c:v mpeg4 "+outputPath;
-        FFmpegSession session = FFmpegKit.execute(com);
+        FFmpegSession session = FFmpegKit.execute(command);
         if (ReturnCode.isSuccess(session.getReturnCode())) {
 
             // SUCCESS
             Log.d(TAG, "addWatermark: success");
+
+            File cacheFile = new File(inputPath);
+            if (cacheFile.exists())
+                cacheFile.delete();
 
         } else if (ReturnCode.isCancel(session.getReturnCode())) {
 
@@ -300,8 +176,15 @@ public class Utils {
             Log.d(TAG, String.format("Command failed with state %s and rc %s.%s", session.getState(), session.getReturnCode(), session.getFailStackTrace()));
 
         }
-
-
     }
+
+    public static void fileDir(Context context){
+        ContextWrapper contextWrapper = new ContextWrapper(context);
+        Log.d("aaaaaa", "fileDir: " + DATA_DIRECTORY);
+    }
+
+
+
+
 
 }
