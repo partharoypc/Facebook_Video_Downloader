@@ -3,8 +3,7 @@ package com.sikderithub.facebookvideodownloader;
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 import static android.content.ContentValues.TAG;
 import static android.os.Environment.DIRECTORY_DOWNLOADS;
-import static com.sikderithub.facebookvideodownloader.Utils.RootDirectoryFacebook;
-import static com.sikderithub.facebookvideodownloader.Utils.addWatermark;
+import static com.sikderithub.facebookvideodownloader.Constants.downloadVideos;
 import static com.sikderithub.facebookvideodownloader.Utils.createFileFolder;
 
 import static com.sikderithub.facebookvideodownloader.Utils.fileDir;
@@ -66,39 +65,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private String strName = "facebook";
     private String strNameSecond = "fb";
 
-    private Map<Long, DownloadVideo> downloadVideos = new HashMap<>();
-
-    private final BroadcastReceiver downloadComplete = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-
-            if (downloadVideos.containsKey(id)){
-                Log.d(TAG, "onReceive: download complete");
-
-                DownloadVideo downloadVideo = downloadVideos.get(id);
-
-                assert downloadVideo != null;
-                String fileName = "watermark_"+ System.currentTimeMillis()+".mp4";
-                addWatermark(getApplicationContext(),
-                        downloadVideo.getOutputPath(),
-                        Environment.getExternalStorageDirectory() +
-                                "/Download" + RootDirectoryFacebook);
-
-
-                downloadVideos.remove(id);
-            }
-        }
-    };
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        registerReceiver(downloadComplete,new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
-
+        Intent intent = VideoProcessingService.getIntent(this);
+        startService(intent);
 
         txtLink = findViewById(R.id.tv_past_link);
         btnDownloaded = findViewById(R.id.btn_download);
@@ -115,7 +88,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(downloadComplete);
+
     }
 
     /**

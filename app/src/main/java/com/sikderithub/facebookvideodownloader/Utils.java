@@ -29,6 +29,7 @@ import android.os.Build;
 
 import com.arthenica.ffmpegkit.FFmpegKit;
 import com.arthenica.ffmpegkit.FFmpegSession;
+import com.arthenica.ffmpegkit.FFmpegSessionCompleteCallback;
 import com.arthenica.ffmpegkit.ReturnCode;
 import com.sikderithub.facebookvideodownloader.models.DownloadVideo;
 
@@ -61,6 +62,9 @@ public class Utils {
         toast.show();
     }
 
+    /**
+     * Create directory facebook video downloader in download directory
+     */
     public static void createFileFolder() {
         if (!RootDirectoryFacebookShow.exists()) {
             RootDirectoryFacebookShow.mkdirs();
@@ -121,7 +125,11 @@ public class Utils {
                 fileName, downloadId);
     }
 
-    private static void saveWatermark(Context context) {
+    /**
+     * saving watermark image to the app data directory
+     * @param context takes application context
+     */
+    static void saveWatermark(Context context) {
         Bitmap bm = BitmapFactory.decodeResource(context.getResources(), R.drawable.watermark_white);
         File file = new File(DATA_DIRECTORY, "watermark.png");
         if (!file.exists()) {
@@ -136,16 +144,20 @@ public class Utils {
         }
     }
 
+    /**
+     * Adding watermark on the video using FFmpeg
+     * Called by the broadcast receiver when download complete
+     *
+     * @param context application context
+     * @param inputPath is the appdata directory
+     * @param outputPath is the download directory
+     */
     public static void addWatermark(Context context, String inputPath, String outputPath) {
 
         saveWatermark(context);
         String watermarkPath = DATA_DIRECTORY + "/watermark.png";
         String outFileName = "watermark_" + System.currentTimeMillis()+".mp4";
 
-        /* this is working command
-        String command = "-i "+inputPath+ " -i "+watermarkPath+" -filter_complex overlay=10:10 -c:a copy "+
-                outputPath + outFileName;
-        */
         String command = "-i "+inputPath+ " -i "+watermarkPath+
                 " -filter_complex \"[1]scale=50:25[newoverlay], " +
                 "[0][newoverlay]overlay=main_w-overlay_w-5:main_h-overlay_h-10\" " +
@@ -155,6 +167,8 @@ public class Utils {
 
         Log.d(TAG, "addWatermark: command " + command);
 
+
+        /*
         FFmpegSession session = FFmpegKit.execute(command);
         if (ReturnCode.isSuccess(session.getReturnCode())) {
 
@@ -176,7 +190,34 @@ public class Utils {
             Log.d(TAG, String.format("Command failed with state %s and rc %s.%s", session.getState(), session.getReturnCode(), session.getFailStackTrace()));
 
         }
+        */
+        FFmpegKit.executeAsync(command, session -> {
+            if (ReturnCode.isSuccess(session.getReturnCode())) {
+
+                // SUCCESS
+                Log.d(TAG, "addWatermark: success");
+
+                File cacheFile = new File(inputPath);
+                if (cacheFile.exists())
+                    cacheFile.delete();
+
+            } else if (ReturnCode.isCancel(session.getReturnCode())) {
+
+                // CANCEL
+                Log.d(TAG, "addWatermark: cancel");
+
+            } else {
+
+                // FAILURE
+                Log.d(TAG, String.format("Command failed with state %s and rc %s.%s", session.getState(), session.getReturnCode(), session.getFailStackTrace()));
+
+            }
+
+
+        });
     }
+
+
 
     public static void fileDir(Context context){
         ContextWrapper contextWrapper = new ContextWrapper(context);
