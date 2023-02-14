@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
-    tools:context=".MainActivity">
+    tools:context=".activities.MainActivity">
 
     <RelativeLayout
         android:id="@+id/RLEdittextLayout"
@@ -71,28 +71,13 @@
 
         </LinearLayout>
 
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_below="@id/rl_download_layout"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="24dp">
-
-            <WebView
-                android:id="@+id/wv_page"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_download_list"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:visibility="gone" />
-
-            <ProgressBar
-                android:id="@+id/pb_loading_wv"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_centerInParent="true"
-                android:indeterminateTint="@color/blue_700"
-                android:visibility="gone" />
-        </RelativeLayout>
-
+                android:layout_marginTop="16dp"
+                android:layout_below="@id/rl_download_layout"
+                android:layout_marginBottom="24dp" />
 
     </RelativeLayout>
 </LinearLayout>

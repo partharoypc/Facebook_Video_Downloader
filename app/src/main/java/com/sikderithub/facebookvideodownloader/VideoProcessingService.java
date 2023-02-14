@@ -1,10 +1,8 @@
 package com.sikderithub.facebookvideodownloader;
 
-import static com.sikderithub.facebookvideodownloader.Constants.downloadVideos;
-import static com.sikderithub.facebookvideodownloader.Utils.DATA_DIRECTORY;
-import static com.sikderithub.facebookvideodownloader.Utils.RootDirectoryFacebook;
-import static com.sikderithub.facebookvideodownloader.Utils.addWatermark;
-import static com.sikderithub.facebookvideodownloader.Utils.saveWatermark;
+import static com.sikderithub.facebookvideodownloader.utils.Constants.downloadVideos;
+import static com.sikderithub.facebookvideodownloader.utils.Utils.RootDirectoryFacebook;
+import static com.sikderithub.facebookvideodownloader.utils.Utils.addWatermark;
 
 import android.app.DownloadManager;
 import android.app.Service;
@@ -19,11 +17,8 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
-import com.arthenica.ffmpegkit.FFmpegKit;
-import com.arthenica.ffmpegkit.ReturnCode;
-import com.sikderithub.facebookvideodownloader.models.DownloadVideo;
-
-import java.io.File;
+import com.sikderithub.facebookvideodownloader.activities.MainActivity;
+import com.sikderithub.facebookvideodownloader.models.FVideo;
 
 public class VideoProcessingService extends Service {
     private static final String TAG = "VideoProcessingService";
@@ -33,14 +28,15 @@ public class VideoProcessingService extends Service {
         public void onReceive(Context context, Intent intent) {
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
 
-            if (downloadVideos.containsKey(id)){
+            if (downloadVideos.containsKey(id)) {
                 Log.d("service", "onReceive: download complete");
 
-                DownloadVideo downloadVideo = downloadVideos.get(id);
+                FVideo fVideo = downloadVideos.get(id);
+                Database.updateState(id, FVideo.PROCESSING);
 
-                assert downloadVideo != null;
-                addWatermark(getApplicationContext(),
-                        downloadVideo.getOutputPath(),
+                assert fVideo != null;
+                addWatermark(context, fVideo,
+                        fVideo.getOutputPath(),
                         Environment.getExternalStorageDirectory() +
                                 "/Download" + RootDirectoryFacebook);
 
@@ -55,7 +51,7 @@ public class VideoProcessingService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        registerReceiver(downloadComplete,new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        registerReceiver(downloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
 
     }
 
@@ -78,7 +74,7 @@ public class VideoProcessingService extends Service {
         return null;
     }
 
-    public static Intent getIntent(Context context){
+    public static Intent getIntent(Context context) {
         return new Intent(context, VideoProcessingService.class);
     }
 }

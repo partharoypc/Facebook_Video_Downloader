@@ -1,42 +1,37 @@
-package com.sikderithub.facebookvideodownloader;
+package com.sikderithub.facebookvideodownloader.utils;
 
 import static android.content.Context.DOWNLOAD_SERVICE;
 import static android.os.Environment.DIRECTORY_DOWNLOADS;
-import static android.os.Environment.getDataDirectory;
 import static android.os.Environment.getExternalStorageDirectory;
-
-import static com.arthenica.ffmpegkit.Packages.getPackageName;
 
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.DownloadManager;
 import android.content.Context;
 import android.content.ContextWrapper;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Toast;
-import android.os.Build;
 
 
 import com.arthenica.ffmpegkit.FFmpegKit;
-import com.arthenica.ffmpegkit.FFmpegSession;
-import com.arthenica.ffmpegkit.FFmpegSessionCompleteCallback;
 import com.arthenica.ffmpegkit.ReturnCode;
-import com.sikderithub.facebookvideodownloader.models.DownloadVideo;
+import com.sikderithub.facebookvideodownloader.Database;
+import com.sikderithub.facebookvideodownloader.R;
+import com.sikderithub.facebookvideodownloader.activities.MainActivity;
+import com.sikderithub.facebookvideodownloader.models.FVideo;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
 
 
 public class Utils {
@@ -47,7 +42,7 @@ public class Utils {
 
 
     public static String RootDirectoryFacebook = "/Facebook_Video_Downloader/";
-    public static final String DATA_DIRECTORY= getExternalStorageDirectory() +
+    public static final String DATA_DIRECTORY = getExternalStorageDirectory() +
             "/Android/data/com.sikderithub.facebookvideodownloader/files/data" +
             RootDirectoryFacebook;
     public static File RootDirectoryFacebookShow = new File(Environment.getExternalStorageDirectory() + "/Download" + RootDirectoryFacebook);
@@ -94,7 +89,14 @@ public class Utils {
         }
     }
 
-    public static DownloadVideo startDownload(String downloadPath, Context context, String fileName) {
+    /**
+     * start download using download manager
+     * @param downloadPath download location
+     * @param context
+     * @param fileName filename ex. facebook_16737..
+     * @return FVideo object
+     */
+    public static FVideo startDownload(String downloadPath, Context context, String fileName) {
         setToast(context, context.getResources().getString(R.string.download_started));
         Uri uri = Uri.parse(downloadPath); // Path where you want to download file.
         DownloadManager.Request request = new DownloadManager.Request(uri);
@@ -103,8 +105,14 @@ public class Utils {
         request.setTitle(fileName + ""); // Title for notification.
         request.setVisibleInDownloadsUi(true);
         request.setDestinationInExternalFilesDir(context,
-                Environment.getDataDirectory().getPath() + RootDirectoryFacebook , fileName);// Storage directory path
+                Environment.getDataDirectory().getPath() + RootDirectoryFacebook, fileName);// Storage directory path
         long downloadId = ((DownloadManager) context.getSystemService(DOWNLOAD_SERVICE)).enqueue(request); // This will start downloading
+
+        //Creating a video object to track donload is completed
+        FVideo video = new FVideo(DATA_DIRECTORY, fileName, downloadId);
+        video.setState(FVideo.DOWNLOADING);
+
+        Database.addVideo(video);
 
         Log.d(TAG, "startDownload: " + Environment.getDataDirectory().getPath() + RootDirectoryFacebook + fileName);
 
@@ -121,12 +129,13 @@ public class Utils {
             e.printStackTrace();
         }
 
-        return new DownloadVideo(DATA_DIRECTORY + fileName,
+        return new FVideo(DATA_DIRECTORY + fileName,
                 fileName, downloadId);
     }
 
     /**
      * saving watermark image to the app data directory
+     *
      * @param context takes application context
      */
     static void saveWatermark(Context context) {
@@ -148,49 +157,26 @@ public class Utils {
      * Adding watermark on the video using FFmpeg
      * Called by the broadcast receiver when download complete
      *
-     * @param context application context
-     * @param inputPath is the appdata directory
+     * @param context    application context
+     * @param inputPath  is the appdata directory
      * @param outputPath is the download directory
      */
-    public static void addWatermark(Context context, String inputPath, String outputPath) {
+    public static void addWatermark(Context context, FVideo video,
+                                    String inputPath, String outputPath) {
 
         saveWatermark(context);
         String watermarkPath = DATA_DIRECTORY + "/watermark.png";
-        String outFileName = "watermark_" + System.currentTimeMillis()+".mp4";
+        String outFileName = video.getFileName();
 
-        String command = "-i "+inputPath+ " -i "+watermarkPath+
+        String command = "-i " + inputPath + " -i " + watermarkPath +
                 " -filter_complex \"[1]scale=50:25[newoverlay], " +
                 "[0][newoverlay]overlay=main_w-overlay_w-5:main_h-overlay_h-10\" " +
-                "-preset slow " +
+                "-preset ultrafast " +
                 "-c:a copy " +
                 outputPath + outFileName;
 
         Log.d(TAG, "addWatermark: command " + command);
 
-
-        /*
-        FFmpegSession session = FFmpegKit.execute(command);
-        if (ReturnCode.isSuccess(session.getReturnCode())) {
-
-            // SUCCESS
-            Log.d(TAG, "addWatermark: success");
-
-            File cacheFile = new File(inputPath);
-            if (cacheFile.exists())
-                cacheFile.delete();
-
-        } else if (ReturnCode.isCancel(session.getReturnCode())) {
-
-            // CANCEL
-            Log.d(TAG, "addWatermark: cancel");
-
-        } else {
-
-            // FAILURE
-            Log.d(TAG, String.format("Command failed with state %s and rc %s.%s", session.getState(), session.getReturnCode(), session.getFailStackTrace()));
-
-        }
-        */
         FFmpegKit.executeAsync(command, session -> {
             if (ReturnCode.isSuccess(session.getReturnCode())) {
 
@@ -200,6 +186,16 @@ public class Utils {
                 File cacheFile = new File(inputPath);
                 if (cacheFile.exists())
                     cacheFile.delete();
+
+
+                Handler mHandler = new Handler(Looper.getMainLooper());
+                mHandler.post(() -> {
+                    Database.updateState(video.getDownloadId(), FVideo.COMPLETE);
+
+                    String path = outputPath + outFileName;
+                    Log.d(TAG, "addWatermark: uri" + path);
+                    Database.setUri(video.getDownloadId(), path);
+                });
 
             } else if (ReturnCode.isCancel(session.getReturnCode())) {
 
@@ -218,14 +214,10 @@ public class Utils {
     }
 
 
-
-    public static void fileDir(Context context){
+    public static void fileDir(Context context) {
         ContextWrapper contextWrapper = new ContextWrapper(context);
         Log.d("aaaaaa", "fileDir: " + DATA_DIRECTORY);
     }
-
-
-
 
 
 }

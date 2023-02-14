@@ -1,4 +1,4 @@
-package com.sikderithub.facebookvideodownloader;
+package com.sikderithub.facebookvideodownloader.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -6,6 +6,8 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+
+import com.sikderithub.facebookvideodownloader.R;
 
 @SuppressLint("CustomSplashScreen")
 public class SplashActivity extends AppCompatActivity {

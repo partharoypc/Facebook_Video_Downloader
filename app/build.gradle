@@ -45,5 +45,8 @@ dependencies {
     //FFmpeg kit for video processing
     implementation 'com.arthenica:ffmpeg-kit-full:5.1'
 
+    //paperDb
+    implementation 'io.github.pilgr:paperdb:2.7.2'
+
 
 }

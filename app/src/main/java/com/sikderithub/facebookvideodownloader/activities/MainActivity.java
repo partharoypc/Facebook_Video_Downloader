@@ -1,37 +1,25 @@
-package com.sikderithub.facebookvideodownloader;
+package com.sikderithub.facebookvideodownloader.activities;
 
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
-import static android.content.ContentValues.TAG;
-import static android.os.Environment.DIRECTORY_DOWNLOADS;
-import static com.sikderithub.facebookvideodownloader.Constants.downloadVideos;
-import static com.sikderithub.facebookvideodownloader.Utils.createFileFolder;
+import static com.sikderithub.facebookvideodownloader.utils.Constants.downloadVideos;
+import static com.sikderithub.facebookvideodownloader.utils.Utils.createFileFolder;
 
-import static com.sikderithub.facebookvideodownloader.Utils.fileDir;
-import static com.sikderithub.facebookvideodownloader.Utils.startDownload;
+import static com.sikderithub.facebookvideodownloader.utils.Utils.startDownload;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
-import android.app.DownloadManager;
-import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.EditText;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -41,24 +29,30 @@ import com.karumi.dexter.PermissionToken;
 
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
-import com.sikderithub.facebookvideodownloader.models.DownloadVideo;
+import com.sikderithub.facebookvideodownloader.Database;
+import com.sikderithub.facebookvideodownloader.utils.MyApp;
+import com.sikderithub.facebookvideodownloader.R;
+import com.sikderithub.facebookvideodownloader.utils.Utils;
+import com.sikderithub.facebookvideodownloader.VideoProcessingService;
+import com.sikderithub.facebookvideodownloader.adapters.ListAdapter;
+import com.sikderithub.facebookvideodownloader.models.FVideo;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends MyApp implements View.OnClickListener {
 
     private static final String TAG = "MainActivity";
     private EditText txtLink;
-    private TextView btnDownloaded,btnPest;
-    private WebView wvPage;
-    private ProgressBar pbLoading;
+    private TextView btnDownloaded, btnPest;
+    private RecyclerView downloadList;
+    private static ListAdapter adapter;
+
     private ClipboardManager clipBoard;
     private MainActivity activity;
     private String videoUrl;
@@ -70,43 +64,92 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //Start videoProcessing service to process the video and add watermark using FFmpeg
         Intent intent = VideoProcessingService.getIntent(this);
         startService(intent);
 
         txtLink = findViewById(R.id.tv_past_link);
         btnDownloaded = findViewById(R.id.btn_download);
         btnPest = findViewById(R.id.btn_paste);
-        pbLoading = findViewById(R.id.pb_loading_wv);
-        wvPage = findViewById(R.id.wv_page);
+        downloadList = findViewById(R.id.rv_download_list);
+
+        downloadList.setLayoutManager(new LinearLayoutManager(this));
+        //Item click listener for download list
+        adapter = new ListAdapter(this, new ListAdapter.ItemClickListener() {
+            @Override
+            public void onItemClickListener(FVideo video) {
+                assert video != null;
+                Log.d(TAG, "onItemClickListener: " + video.getFileUri());
+
+                switch (video.getState()) {
+                    case FVideo.DOWNLOADING:
+                        //video is in download state
+                        Toast.makeText(getApplicationContext(), "Video Downloading", Toast.LENGTH_LONG).show();
+                        break;
+                    case FVideo.PROCESSING:
+                        //Video is processing
+                        Toast.makeText(getApplicationContext(), "Video Processing", Toast.LENGTH_LONG).show();
+                        break;
+                    case FVideo.COMPLETE:
+                        //complete download and processing ready to use
+                        String location = video.getFileUri();
+
+                        Log.d(TAG, "onItemClickListener: " + location);
+                        File file = new File(location);
+                        if (file.exists()){
+                            Uri uri = Uri.parse(location);
+                            Intent intent = new Intent(Intent.ACTION_VIEW);
+                            intent.setDataAndType(uri, "*/*");
+                            startActivity(intent);
+                        }else{
+                            Toast.makeText(getApplicationContext(), "File doesn't exists", Toast.LENGTH_LONG).show();
+                            Log.d(TAG, "onItemClickListener: file " + file.getPath());
+                        }
+
+
+                }
+
+            }
+        });
+
+        //This function notify the adapter to dataset change
+        updateListData();
+        downloadList.setAdapter(adapter);
 
         //Check the read and write user permission
         checkPermission();
+
+        //Initialize all views and click listener
         initViews();
 
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
+    /**
+     * this function update the listAdapter data form the database
+     */
+    public static void updateListData() {
+        adapter.setVideos(Database.getVideos());
     }
 
     /**
      * check user permission to read and write in the external strage
      * if permission not granted then it takes user permission
      */
-    private void checkPermission(){
+    private void checkPermission() {
         Dexter.withContext(this)
                 .withPermissions(
                         Manifest.permission.READ_EXTERNAL_STORAGE,
                         Manifest.permission.WRITE_EXTERNAL_STORAGE
                 ).withListener(new MultiplePermissionsListener() {
-                    @Override public void onPermissionsChecked(MultiplePermissionsReport report) {
-                        if (!report.areAllPermissionsGranted()){
+                    @Override
+                    public void onPermissionsChecked(MultiplePermissionsReport report) {
+                        if (!report.areAllPermissionsGranted()) {
                             checkPermission();
                         }
                     }
-                    @Override public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {/* ... */}
+
+                    @Override
+                    public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {/* ... */}
                 }).check();
     }
 
@@ -119,7 +162,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
-
+    /**
+     * Initialize views and item click listerner
+     */
     private void initViews() {
         clipBoard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
 
@@ -128,6 +173,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btnDownloaded.setOnClickListener(this);
     }
 
+    /**
+     * paste clipboard text to edit text
+     */
     private void pasteText() {
         try {
             txtLink.setText("");
@@ -165,22 +213,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
-
-    private void getFacebookData()  {
+    /**
+     * this function called when download button is clicked
+     * this function call jsoup in a background thread fetch video and download it
+     */
+    private void getFacebookData() {
         try {
             createFileFolder();
             URL url = new URL(txtLink.getText().toString());
             String host = url.getHost();
-            Log.d(TAG, "getFacebookData: url " + url.toString());
+            Log.d(TAG, "getFacebookData: url " + url);
 
             if (host.contains(strName) || host.contains(strNameSecond)) {
                 Utils.showProgressDialog(activity);
+
+                //calling jsoup in background thread
                 new callFacebookData().execute(txtLink.getText().toString());
 
             } else {
                 Utils.setToast(activity, getResources().getString(R.string.enter_valid_url));
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -201,7 +254,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View v) {
         int id = v.getId();
-        switch (id){
+        switch (id) {
             case R.id.btn_paste:
                 pasteText();
                 break;
@@ -213,15 +266,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     Utils.setToast(activity, getResources().getString(R.string.enter_valid_url));
                 } else {
                     getFacebookData();
-                    //fileDir(this);
-
                 }
-
         }
     }
 
 
-    class callFacebookData extends AsyncTask<String,Void, Document>{
+    class callFacebookData extends AsyncTask<String, Void, Document> {
 
         Document facebookDoc;
 
@@ -229,6 +279,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         protected Document doInBackground(String... urls) {
 
             try {
+                //fetching facebook document form facebook link
                 facebookDoc = Jsoup.connect(urls[0]).get();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -245,11 +296,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Log.d(TAG, "onPostExecute: result is null");
 
             try {
+                //Extracting video link form the facebook document
                 videoUrl = result.select("meta[property=\"og:video\"]").last().attr("content");
                 Log.d(TAG, "onPostExecute: " + videoUrl);
                 if (!videoUrl.equals("")) {
-                    DownloadVideo downloadVideo = startDownload(videoUrl, activity, "facebook_"+ System.currentTimeMillis()+".mp4");
-                    downloadVideos.put(downloadVideo.getDownloadId(), downloadVideo);
+
+                    //downloading the video using download manager
+                    FVideo fVideo = startDownload(videoUrl, activity, "facebook_" + System.currentTimeMillis() + ".mp4");
+                    downloadVideos.put(fVideo.getDownloadId(), fVideo);
                     videoUrl = "";
                     txtLink.setText("");
                 }
