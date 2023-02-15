@@ -3,18 +3,10 @@ package com.sikderithub.facebookvideodownloader.activities;
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 import static com.sikderithub.facebookvideodownloader.utils.Constants.downloadVideos;
 import static com.sikderithub.facebookvideodownloader.utils.Utils.createFileFolder;
-
 import static com.sikderithub.facebookvideodownloader.utils.Utils.startDownload;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.navigation.Navigation;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
@@ -30,20 +22,27 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.android.material.navigation.NavigationView;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
-
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 import com.sikderithub.facebookvideodownloader.Database;
-import com.sikderithub.facebookvideodownloader.utils.MyApp;
 import com.sikderithub.facebookvideodownloader.R;
-import com.sikderithub.facebookvideodownloader.utils.Utils;
 import com.sikderithub.facebookvideodownloader.VideoProcessingService;
 import com.sikderithub.facebookvideodownloader.adapters.ListAdapter;
 import com.sikderithub.facebookvideodownloader.models.FVideo;
+import com.sikderithub.facebookvideodownloader.utils.MyApp;
+import com.sikderithub.facebookvideodownloader.utils.Utils;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -51,26 +50,33 @@ import org.jsoup.nodes.Document;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends MyApp implements View.OnClickListener {
 
     private static final String TAG = "MainActivity";
+    private static ListAdapter adapter;
+    public ActionBarDrawerToggle actionBarDrawerToggle;
     private EditText txtLink;
     private TextView btnDownloaded, btnPest;
     private RecyclerView downloadList;
     private ImageView imageMenu;
-    private static ListAdapter adapter;
-
     private DrawerLayout drawerLayout;
     private NavigationView navigationView;
-    public ActionBarDrawerToggle actionBarDrawerToggle;
-
     private ClipboardManager clipBoard;
     private MainActivity activity;
-    private String videoUrl;
-    private String strName = "facebook";
-    private String strNameSecond = "fb";
+    private final String strName = "facebook";
+    private final String strNameSecond = "fb";
+    private static ArrayList<FVideo> videos;
+
+    /**
+     * this function update the listAdapter data form the database
+     */
+    public static void updateListData() {
+        videos = Database.getVideos();
+        adapter.setVideos(videos);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +93,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         downloadList = findViewById(R.id.rv_download_list);
 
 
-        // Navagation Drawar------------------------------
+        // Navagation Drawar
         drawerLayout = findViewById(R.id.drawer_layout);
         navigationView = findViewById(R.id.nav_View);
         imageMenu = findViewById(R.id.imageMenu);
@@ -99,40 +105,39 @@ public class MainActivity extends MyApp implements View.OnClickListener {
 
         downloadList.setLayoutManager(new LinearLayoutManager(this));
         //Item click listener for download list
-        adapter = new ListAdapter(this, new ListAdapter.ItemClickListener() {
-            @Override
-            public void onItemClickListener(FVideo video) {
-                assert video != null;
-                Log.d(TAG, "onItemClickListener: " + video.getFileUri());
+        adapter = new ListAdapter(this, video -> {
+            assert video != null;
+            Log.d(TAG, "onItemClickListener: " + video.getFileUri());
 
-                switch (video.getState()) {
-                    case FVideo.DOWNLOADING:
-                        //video is in download state
-                        Toast.makeText(getApplicationContext(), "Video Downloading", Toast.LENGTH_LONG).show();
-                        break;
-                    case FVideo.PROCESSING:
-                        //Video is processing
-                        Toast.makeText(getApplicationContext(), "Video Processing", Toast.LENGTH_LONG).show();
-                        break;
-                    case FVideo.COMPLETE:
-                        //complete download and processing ready to use
-                        String location = video.getFileUri();
+            switch (video.getState()) {
+                case FVideo.DOWNLOADING:
+                    //video is in download state
+                    Toast.makeText(getApplicationContext(), "Video Downloading", Toast.LENGTH_LONG).show();
+                    break;
+                case FVideo.PROCESSING:
+                    //Video is processing
+                    Toast.makeText(getApplicationContext(), "Video Processing", Toast.LENGTH_LONG).show();
+                    break;
+                case FVideo.COMPLETE:
+                    //complete download and processing ready to use
+                    String location = video.getFileUri();
 
-                        Log.d(TAG, "onItemClickListener: " + location);
-                        File file = new File(location);
-                        if (file.exists()) {
-                            Uri uri = Uri.parse(location);
-                            Intent intent = new Intent(Intent.ACTION_VIEW);
-                            intent.setDataAndType(uri, "video/*");
-                            startActivity(intent);
-                        } else {
-                            Toast.makeText(getApplicationContext(), "File doesn't exists", Toast.LENGTH_LONG).show();
-                            Log.d(TAG, "onItemClickListener: file " + file.getPath());
-                        }
+                    //Downloaded video play into video player
+                    File file = new File(location);
+                    if (file.exists()) {
+                        Uri uri = Uri.parse(location);
+                        Intent intent1 = new Intent(Intent.ACTION_VIEW);
+                        intent1.setDataAndType(uri, "video/*");
+                        startActivity(intent1);
+                    } else {
 
+                        //File doesn't exists
+                        Toast.makeText(getApplicationContext(), "File doesn't exists", Toast.LENGTH_LONG).show();
+                        Log.d(TAG, "onItemClickListener: file " + file.getPath());
 
-                }
-
+                        //Delete the video instance from the list
+                        Database.deleteAVideo(video.getDownloadId());
+                    }
             }
         });
 
@@ -146,13 +151,6 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         //Initialize all views and click listener
         initViews();
 
-    }
-
-    /**
-     * this function update the listAdapter data form the database
-     */
-    public static void updateListData() {
-        adapter.setVideos(Database.getVideos());
     }
 
     /**
@@ -197,6 +195,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
     /**
      * Initialize views and item click listerner
      */
+    @SuppressLint("NonConstantResourceId")
     private void initViews() {
         clipBoard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
 
@@ -204,46 +203,52 @@ public class MainActivity extends MyApp implements View.OnClickListener {
 
         btnDownloaded.setOnClickListener(this);
 
-        navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
+        //Handel the navigation view click
+        navigationView.setNavigationItemSelectedListener(item -> {
+            Intent intent = new Intent(getApplicationContext(), WebViewActivity.class);
+            String address = "";
+            String title = "";
+
+            switch (item.getItemId()) {
+                case R.id.nav_about_us:
+                    address = "www.youtube.com/";
+                    title = "About Us";
+                    break;
+                case R.id.nav_t_c:
+                    address = "www.facebook.com";
+                    title = "Terms & Condition";
+                    break;
+                case R.id.nav_contract_us:
+                    address = "";
+                    title = "Contract Us";
+                    break;
+                case R.id.nav_privacy_policy:
+                    address = "";
+                    title = "Privacy Policy";
+                    break;
+            }
+
+            intent.putExtra(WebViewActivity.KEY_TITLE, title);
+            intent.putExtra(WebViewActivity.KEY_WEB_ADDRESS, address);
+            startActivity(intent);
+            return false;
+        });
+
+        //Opening the drawer when image button on action bar is clicked
+        imageMenu.setOnClickListener(view -> drawerLayout.openDrawer(GravityCompat.START));
+
+        new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
             @Override
-            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-                Intent intent = new Intent(getApplicationContext(), WebViewActivity.class);
-                String address = "";
-                String title = "";
-
-                switch (item.getItemId()) {
-                    case R.id.nav_about_us:
-                        address = "www.youtube.com/";
-                        title = "About Us";
-                        break;
-                    case R.id.nav_t_c:
-                        address = "www.facebook.com";
-                        title = "Terms & Condition";
-                        break;
-                    case R.id.nav_contract_us:
-                        address = "";
-                        title = "Contract Us";
-                        break;
-                    case R.id.nav_privacy_policy:
-                        address = "";
-                        title = "Privacy Policy";
-                        break;
-                }
-
-                intent.putExtra(WebViewActivity.KEY_TITLE, title);
-                intent.putExtra(WebViewActivity.KEY_WEB_ADDRESS, address);
-                startActivity(intent);
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
                 return false;
             }
-        });
 
-        imageMenu.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                // Code Here
-                drawerLayout.openDrawer(GravityCompat.START);
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                int adapterPosition = viewHolder.getAdapterPosition();
+                Database.deleteAVideo(videos.get(adapterPosition).getDownloadId());
             }
-        });
+        }).attachToRecyclerView(downloadList);
     }
 
     /**
@@ -324,6 +329,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         }
     }
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     public void onClick(View v) {
         int id = v.getId();
@@ -370,19 +376,19 @@ public class MainActivity extends MyApp implements View.OnClickListener {
 
             try {
                 //Extracting video link form the facebook document
-                videoUrl = result.select("meta[property=\"og:video\"]").last().attr("content");
+                assert result != null;
+                String videoUrl = result.select("meta[property=\"og:video\"]").last().attr("content");
                 Log.d(TAG, "onPostExecute: " + videoUrl);
                 if (!videoUrl.equals("")) {
 
                     //downloading the video using download manager
                     FVideo fVideo = startDownload(videoUrl, activity, "facebook_" + System.currentTimeMillis() + ".mp4");
                     downloadVideos.put(fVideo.getDownloadId(), fVideo);
-                    videoUrl = "";
                     txtLink.setText("");
                 }
             } catch (NullPointerException e) {
                 e.printStackTrace();
-                Log.d(TAG, "onPostExecute: error!!!" + e.toString());
+                Log.d(TAG, "onPostExecute: error!!!" + e);
             }
         }
     }

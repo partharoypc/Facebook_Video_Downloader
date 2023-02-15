@@ -1,26 +1,30 @@
 package com.sikderithub.facebookvideodownloader.adapters;
 
 
+import android.app.AlertDialog;
 import android.content.Context;
-import android.net.Uri;
+import android.content.DialogInterface;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.sikderithub.facebookvideodownloader.Database;
 import com.sikderithub.facebookvideodownloader.R;
 import com.sikderithub.facebookvideodownloader.models.FVideo;
 
+import java.io.File;
 import java.util.List;
 
 public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ListViewHolder> {
 
-    private List<FVideo> videos;
-    private Context context;
     private final ItemClickListener itemClickListener;
+    private List<FVideo> videos;
+    private final Context context;
 
     public ListAdapter(Context context, ItemClickListener itemClickListener) {
         this.itemClickListener = itemClickListener;
@@ -69,7 +73,8 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ListViewHolder
         void onItemClickListener(FVideo video);
     }
 
-    class ListViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    class ListViewHolder extends RecyclerView.ViewHolder
+            implements View.OnClickListener, View.OnLongClickListener {
         TextView tvVideoTitle;
         TextView tvVideoState;
 
@@ -80,12 +85,49 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ListViewHolder
             tvVideoState = itemView.findViewById(R.id.tv_video_state);
 
             itemView.setOnClickListener(this);
+            itemView.setOnLongClickListener(this);
         }
 
         @Override
         public void onClick(View v) {
             FVideo video = videos.get(getAdapterPosition());
             itemClickListener.onItemClickListener(video);
+        }
+
+        @Override
+        public boolean onLongClick(View v) {
+            FVideo video = videos.get(getAdapterPosition());
+
+            File file = new File(video.getFileUri());
+
+            if (video.getState() == FVideo.COMPLETE) {
+                if (file.exists()) {
+                    new AlertDialog.Builder(context)
+                            .setTitle("Want to delete this video?")
+                            .setMessage("This will delete video form your memory")
+                            .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+
+                                    boolean isDeleted = file.delete();
+                                    if (isDeleted)
+                                        Toast.makeText(context, "Video deleted", Toast.LENGTH_SHORT).show();
+                                    Database.deleteAVideo(video.getDownloadId());
+                                }
+                            })
+                            .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.cancel();
+                                }
+                            })
+                            .show();
+                }
+                else {
+                    Database.deleteAVideo((video.getDownloadId()));
+                }
+            }
+            return true;
         }
     }
 

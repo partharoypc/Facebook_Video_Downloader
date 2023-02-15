@@ -53,7 +53,6 @@ public class Utils {
 
     public static void setToast(Context mContext, String str) {
         Toast toast = Toast.makeText(mContext, str, Toast.LENGTH_SHORT);
-        toast.setGravity(Gravity.CENTER, 0, 0);
         toast.show();
     }
 
@@ -212,12 +211,5 @@ public class Utils {
 
         });
     }
-
-
-    public static void fileDir(Context context) {
-        ContextWrapper contextWrapper = new ContextWrapper(context);
-        Log.d("aaaaaa", "fileDir: " + DATA_DIRECTORY);
-    }
-
 
 }
