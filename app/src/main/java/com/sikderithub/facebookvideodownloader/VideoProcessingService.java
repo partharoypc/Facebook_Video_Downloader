@@ -64,7 +64,6 @@ public class VideoProcessingService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Toast.makeText(this, "Service is starting", Toast.LENGTH_LONG).show();
         return START_STICKY;
     }
 

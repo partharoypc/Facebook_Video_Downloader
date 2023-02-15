@@ -6,6 +6,11 @@ import static com.sikderithub.facebookvideodownloader.utils.Utils.createFileFold
 
 import static com.sikderithub.facebookvideodownloader.utils.Utils.startDownload;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -18,11 +23,14 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Patterns;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.material.navigation.NavigationView;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
@@ -51,7 +59,12 @@ public class MainActivity extends MyApp implements View.OnClickListener {
     private EditText txtLink;
     private TextView btnDownloaded, btnPest;
     private RecyclerView downloadList;
+    private ImageView imageMenu;
     private static ListAdapter adapter;
+
+    private DrawerLayout drawerLayout;
+    private NavigationView navigationView;
+    public ActionBarDrawerToggle actionBarDrawerToggle;
 
     private ClipboardManager clipBoard;
     private MainActivity activity;
@@ -72,6 +85,17 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         btnDownloaded = findViewById(R.id.btn_download);
         btnPest = findViewById(R.id.btn_paste);
         downloadList = findViewById(R.id.rv_download_list);
+
+
+        // Navagation Drawar------------------------------
+        drawerLayout = findViewById(R.id.drawer_layout);
+        navigationView = findViewById(R.id.nav_View);
+        imageMenu = findViewById(R.id.imageMenu);
+        actionBarDrawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
+                R.string.nav_open, R.string.nav_close);
+        drawerLayout.addDrawerListener(actionBarDrawerToggle);
+        actionBarDrawerToggle.syncState();
+
 
         downloadList.setLayoutManager(new LinearLayoutManager(this));
         //Item click listener for download list
@@ -96,12 +120,12 @@ public class MainActivity extends MyApp implements View.OnClickListener {
 
                         Log.d(TAG, "onItemClickListener: " + location);
                         File file = new File(location);
-                        if (file.exists()){
+                        if (file.exists()) {
                             Uri uri = Uri.parse(location);
                             Intent intent = new Intent(Intent.ACTION_VIEW);
-                            intent.setDataAndType(uri, "*/*");
+                            intent.setDataAndType(uri, "video/*");
                             startActivity(intent);
-                        }else{
+                        } else {
                             Toast.makeText(getApplicationContext(), "File doesn't exists", Toast.LENGTH_LONG).show();
                             Log.d(TAG, "onItemClickListener: file " + file.getPath());
                         }
@@ -161,6 +185,14 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         pasteText();
     }
 
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (actionBarDrawerToggle.onOptionsItemSelected(item)) {
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+
+    }
 
     /**
      * Initialize views and item click listerner
@@ -171,6 +203,47 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         btnPest.setOnClickListener(this);
 
         btnDownloaded.setOnClickListener(this);
+
+        navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                Intent intent = new Intent(getApplicationContext(), WebViewActivity.class);
+                String address = "";
+                String title = "";
+
+                switch (item.getItemId()) {
+                    case R.id.nav_about_us:
+                        address = "www.youtube.com/";
+                        title = "About Us";
+                        break;
+                    case R.id.nav_t_c:
+                        address = "www.facebook.com";
+                        title = "Terms & Condition";
+                        break;
+                    case R.id.nav_contract_us:
+                        address = "";
+                        title = "Contract Us";
+                        break;
+                    case R.id.nav_privacy_policy:
+                        address = "";
+                        title = "Privacy Policy";
+                        break;
+                }
+
+                intent.putExtra(WebViewActivity.KEY_TITLE, title);
+                intent.putExtra(WebViewActivity.KEY_WEB_ADDRESS, address);
+                startActivity(intent);
+                return false;
+            }
+        });
+
+        imageMenu.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // Code Here
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
     }
 
     /**
