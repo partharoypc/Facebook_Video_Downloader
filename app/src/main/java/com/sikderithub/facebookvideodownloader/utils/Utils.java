@@ -198,10 +198,6 @@ public class Utils {
                 // SUCCESS
                 Log.d(TAG, "addWatermark: success");
 
-                File cacheFile = new File(inputPath);
-                if (cacheFile.exists())
-                    cacheFile.delete();
-
 
                 Handler mHandler = new Handler(Looper.getMainLooper());
                 mHandler.post(() -> {
@@ -223,6 +219,11 @@ public class Utils {
                 Log.d(TAG, String.format("Command failed with state %s and rc %s.%s", session.getState(), session.getReturnCode(), session.getFailStackTrace()));
 
             }
+
+            //Deleting cacheFile from directory
+            File cacheFile = new File(inputPath);
+            if (cacheFile.exists())
+                cacheFile.delete();
 
 
         });
