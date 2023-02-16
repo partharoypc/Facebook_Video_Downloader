@@ -2,17 +2,24 @@ package com.sikderithub.facebookvideodownloader.activities;
 
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 import static com.sikderithub.facebookvideodownloader.utils.Constants.downloadVideos;
+import static com.sikderithub.facebookvideodownloader.utils.Utils.RootDirectoryFacebook;
+import static com.sikderithub.facebookvideodownloader.utils.Utils.addWatermark;
 import static com.sikderithub.facebookvideodownloader.utils.Utils.createFileFolder;
 import static com.sikderithub.facebookvideodownloader.utils.Utils.startDownload;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.MenuItem;
@@ -38,7 +45,6 @@ import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 import com.sikderithub.facebookvideodownloader.Database;
 import com.sikderithub.facebookvideodownloader.R;
-import com.sikderithub.facebookvideodownloader.VideoProcessingService;
 import com.sikderithub.facebookvideodownloader.adapters.ListAdapter;
 import com.sikderithub.facebookvideodownloader.models.FVideo;
 import com.sikderithub.facebookvideodownloader.utils.MyApp;
@@ -57,6 +63,32 @@ public class MainActivity extends MyApp implements View.OnClickListener {
 
     private static final String TAG = "MainActivity";
     private static ListAdapter adapter;
+    private static ArrayList<FVideo> videos;
+    private final String strName = "facebook";
+    private final String strNameSecond = "fb";
+    //Broadcast receiver for download complete.
+    private final BroadcastReceiver downloadComplete = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+
+            if (downloadVideos.containsKey(id)) {
+                Log.d("service", "onReceive: download complete");
+
+                FVideo fVideo = downloadVideos.get(id);
+                Database.updateState(id, FVideo.PROCESSING);
+
+                assert fVideo != null;
+                addWatermark(context, fVideo,
+                        fVideo.getOutputPath(),
+                        Environment.getExternalStorageDirectory() +
+                                "/Download" + RootDirectoryFacebook);
+
+
+                downloadVideos.remove(id);
+            }
+        }
+    };
     public ActionBarDrawerToggle actionBarDrawerToggle;
     private EditText txtLink;
     private TextView btnDownloaded, btnPest;
@@ -66,9 +98,6 @@ public class MainActivity extends MyApp implements View.OnClickListener {
     private NavigationView navigationView;
     private ClipboardManager clipBoard;
     private MainActivity activity;
-    private final String strName = "facebook";
-    private final String strNameSecond = "fb";
-    private static ArrayList<FVideo> videos;
 
     /**
      * this function update the listAdapter data form the database
@@ -83,17 +112,15 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Start videoProcessing service to process the video and add watermark using FFmpeg
-        Intent intent = VideoProcessingService.getIntent(this);
-        startService(intent);
+        registerReceiver(downloadComplete,
+                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
 
         txtLink = findViewById(R.id.tv_past_link);
         btnDownloaded = findViewById(R.id.btn_download);
         btnPest = findViewById(R.id.btn_paste);
         downloadList = findViewById(R.id.rv_download_list);
 
-
-        // Navagation Drawar
+        // Navigation Drawer
         drawerLayout = findViewById(R.id.drawer_layout);
         navigationView = findViewById(R.id.nav_View);
         imageMenu = findViewById(R.id.imageMenu);
@@ -150,6 +177,13 @@ public class MainActivity extends MyApp implements View.OnClickListener {
 
         //Initialize all views and click listener
         initViews();
+
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(downloadComplete);
 
     }
 
@@ -371,12 +405,15 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         @Override
         protected void onPostExecute(Document result) {
             Utils.hideProgressDialog(activity);
-            if (result == null)
+            if (result == null) {
                 Log.d(TAG, "onPostExecute: result is null");
+                Toast.makeText(getApplicationContext(), "opps! video not found", Toast.LENGTH_LONG).show();
+                return;
+            }
+
 
             try {
                 //Extracting video link form the facebook document
-                assert result != null;
                 String videoUrl = result.select("meta[property=\"og:video\"]").last().attr("content");
                 Log.d(TAG, "onPostExecute: " + videoUrl);
                 if (!videoUrl.equals("")) {

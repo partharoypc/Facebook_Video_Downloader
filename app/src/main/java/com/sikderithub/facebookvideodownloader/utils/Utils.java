@@ -8,7 +8,6 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.app.DownloadManager;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaScannerConnection;
@@ -17,17 +16,16 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Toast;
 
-
 import com.arthenica.ffmpegkit.FFmpegKit;
+import com.arthenica.ffmpegkit.FFprobeKit;
+import com.arthenica.ffmpegkit.FFprobeSession;
 import com.arthenica.ffmpegkit.ReturnCode;
 import com.sikderithub.facebookvideodownloader.Database;
 import com.sikderithub.facebookvideodownloader.R;
-import com.sikderithub.facebookvideodownloader.activities.MainActivity;
 import com.sikderithub.facebookvideodownloader.models.FVideo;
 
 import java.io.File;
@@ -36,16 +34,14 @@ import java.io.FileOutputStream;
 
 public class Utils {
     private static final String TAG = "Utils";
-    public static Dialog customDialog;
-    private Context context;
     private static final String FFMPEG_BINARY = "ffmpeg";
-
-
+    public static Dialog customDialog;
     public static String RootDirectoryFacebook = "/Facebook_Video_Downloader/";
     public static final String DATA_DIRECTORY = getExternalStorageDirectory() +
             "/Android/data/com.sikderithub.facebookvideodownloader/files/data" +
             RootDirectoryFacebook;
     public static File RootDirectoryFacebookShow = new File(Environment.getExternalStorageDirectory() + "/Download" + RootDirectoryFacebook);
+    private final Context context;
 
     public Utils(Context mContext) {
         context = mContext;
@@ -90,9 +86,10 @@ public class Utils {
 
     /**
      * start download using download manager
+     *
      * @param downloadPath download location
      * @param context
-     * @param fileName filename ex. facebook_16737..
+     * @param fileName     filename ex. facebook_16737..
      * @return FVideo object
      */
     public static FVideo startDownload(String downloadPath, Context context, String fileName) {
@@ -166,11 +163,30 @@ public class Utils {
         saveWatermark(context);
         String watermarkPath = DATA_DIRECTORY + "/watermark.png";
         String outFileName = video.getFileName();
+        String[] bit_rate = {"1M"};
+
+        String commandVideoBitRate = "-v quiet -print_format json -select_streams v:0 " +
+                "-show_entries stream=bit_rate -of " +
+                "default=noprint_wrappers=1 " + inputPath;
+        FFprobeSession probeSession = FFprobeKit.execute(commandVideoBitRate);
+
+        if (ReturnCode.isSuccess(probeSession.getReturnCode())) {
+            int bitRate = Integer.parseInt(probeSession.getOutput().trim().split("=")[1]);
+            bit_rate[0] = bitRate / 1000 + 300 + "K";
+            Log.d(TAG, "apply: bit_rate " + bit_rate[0]);
+
+            Log.d(TAG, "apply: ffprove bitrate " +
+                    Integer.parseInt(probeSession.getOutput().trim().split("=")[1]));
+        } else {
+            Log.d(TAG, "apply: error!!!");
+        }
+
 
         String command = "-i " + inputPath + " -i " + watermarkPath +
                 " -filter_complex \"[1]scale=50:25[newoverlay], " +
                 "[0][newoverlay]overlay=main_w-overlay_w-5:main_h-overlay_h-10\" " +
-                "-preset ultrafast " +
+                " -vb " + bit_rate[0] + " -vcodec mpeg4 " +
+                "-preset ultrafast -crf 0 " +
                 "-c:a copy " +
                 outputPath + outFileName;
 
@@ -210,6 +226,7 @@ public class Utils {
 
 
         });
+
     }
 
 }

@@ -103,11 +103,8 @@ public class Database {
     public static void deleteAVideo(Long videoId){
         ArrayList<FVideo> videos = Paper.book().read(KEY_VIDEOS, new ArrayList<>());
 
-        for (FVideo video: videos){
-            if (video.getDownloadId() == videoId){
-                videos.remove(video);
-            }
-        }
+        assert videos != null;
+        videos.removeIf(video -> video.getDownloadId() == videoId);
         Paper.book().write(KEY_VIDEOS, videos);
         MainActivity.updateListData();
     }

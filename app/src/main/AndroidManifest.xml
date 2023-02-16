@@ -47,7 +47,6 @@
                 android:value="" />
         </activity>
 
-        <service android:name=".VideoProcessingService" />
     </application>
 
 </manifest>
