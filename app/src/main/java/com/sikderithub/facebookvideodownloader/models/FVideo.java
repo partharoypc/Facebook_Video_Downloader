@@ -1,7 +1,5 @@
 package com.sikderithub.facebookvideodownloader.models;
 
-import android.net.Uri;
-
 public class FVideo {
     public static final int DOWNLOADING = 1;
     public static final int PROCESSING = 2;
@@ -12,11 +10,17 @@ public class FVideo {
     private long downloadId;
     private String fileUri;
     private int State;
+    private final boolean isWatermarked;
 
-    public FVideo(String outputPath, String fileName, long downloadId) {
+    public FVideo(String outputPath, String fileName, long downloadId, boolean isWatermarked) {
         this.outputPath = outputPath;
         this.fileName = fileName;
         this.downloadId = downloadId;
+        this.isWatermarked = isWatermarked;
+    }
+
+    public boolean isWatermarked() {
+        return isWatermarked;
     }
 
     public String getOutputPath() {

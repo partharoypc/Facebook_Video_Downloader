@@ -34,7 +34,6 @@ import java.io.FileOutputStream;
 
 public class Utils {
     private static final String TAG = "Utils";
-    private static final String FFMPEG_BINARY = "ffmpeg";
     public static Dialog customDialog;
     public static String RootDirectoryFacebook = "/Facebook_Video_Downloader/";
     public static final String DATA_DIRECTORY = getExternalStorageDirectory() +
@@ -86,13 +85,62 @@ public class Utils {
 
     /**
      * start download using download manager
+     *Downloads video in downloads/Facebook_video_downloader folder
      *
-     * @param downloadPath download location
+     * @param downloadPath video Url
      * @param context
      * @param fileName     filename ex. facebook_16737..
      * @return FVideo object
      */
-    public static FVideo startDownload(String downloadPath, Context context, String fileName) {
+    public static FVideo startDownload(Context context,String downloadPath, String fileName) {
+        setToast(context, context.getResources().getString(R.string.download_started));
+        Uri uri = Uri.parse(downloadPath); // Path where you want to download file.
+        DownloadManager.Request request = new DownloadManager.Request(uri);
+        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_MOBILE | DownloadManager.Request.NETWORK_WIFI);  // Tell on which network you want to download file.
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);  // This will show notification on top when downloading the file.
+        request.setTitle(fileName + ""); // Title for notification.
+        request.setVisibleInDownloadsUi(true);
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, RootDirectoryFacebook +fileName);// Storage directory path
+        long downloadId = ((DownloadManager) context.getSystemService(DOWNLOAD_SERVICE)).enqueue(request); // This will start downloading
+
+        //Creating a video object to track download is completed
+        FVideo video = new FVideo(Environment.getExternalStorageDirectory() +
+                "/Download" + RootDirectoryFacebook, fileName, downloadId, false);
+        video.setState(FVideo.DOWNLOADING);
+
+        Database.addVideo(video);
+
+        Log.d(TAG, "startDownload: " + Environment.getDataDirectory().getPath() + RootDirectoryFacebook + fileName);
+
+        try {
+            MediaScannerConnection.scanFile(context, new String[]{new File(DIRECTORY_DOWNLOADS + "/" + fileName).getAbsolutePath()},
+                    null, new MediaScannerConnection.OnScanCompletedListener() {
+                        public void onScanCompleted(String path, Uri uri) {
+                            Log.d("videoProcess", "onScanCompleted: " + path);
+                        }
+                    });
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return new FVideo(Environment.getExternalStorageDirectory() +
+                "/Download" + RootDirectoryFacebook + fileName,
+                fileName, downloadId, false);
+    }
+
+    /**
+     * start download using download manager
+     *Downloads video in appdata folder
+     * and go for add watermark when download complete
+     *
+     * @param downloadPath video Url
+     * @param context
+     * @param fileName     filename ex. facebook_16737..
+     * @return FVideo object
+     */
+    public static FVideo downloadAndWatermark(Context context,String downloadPath, String fileName) {
         setToast(context, context.getResources().getString(R.string.download_started));
         Uri uri = Uri.parse(downloadPath); // Path where you want to download file.
         DownloadManager.Request request = new DownloadManager.Request(uri);
@@ -104,8 +152,8 @@ public class Utils {
                 Environment.getDataDirectory().getPath() + RootDirectoryFacebook, fileName);// Storage directory path
         long downloadId = ((DownloadManager) context.getSystemService(DOWNLOAD_SERVICE)).enqueue(request); // This will start downloading
 
-        //Creating a video object to track donload is completed
-        FVideo video = new FVideo(DATA_DIRECTORY, fileName, downloadId);
+        //Creating a video object to track download is completed
+        FVideo video = new FVideo(DATA_DIRECTORY + fileName, fileName, downloadId, true);
         video.setState(FVideo.DOWNLOADING);
 
         Database.addVideo(video);
@@ -126,7 +174,7 @@ public class Utils {
         }
 
         return new FVideo(DATA_DIRECTORY + fileName,
-                fileName, downloadId);
+                fileName, downloadId, true);
     }
 
     /**
@@ -163,7 +211,7 @@ public class Utils {
         saveWatermark(context);
         String watermarkPath = DATA_DIRECTORY + "/watermark.png";
         String outFileName = video.getFileName();
-        String[] bit_rate = {"1M"};
+        String[] bit_rate = {"15M"};
 
         String commandVideoBitRate = "-v quiet -print_format json -select_streams v:0 " +
                 "-show_entries stream=bit_rate -of " +
@@ -182,11 +230,21 @@ public class Utils {
         }
 
 
+        String commandInfo = inputPath;
+        FFprobeSession fprobeSession = FFprobeKit.execute(commandInfo);
+        if (ReturnCode.isSuccess(fprobeSession.getReturnCode())){
+            Log.d(TAG, "addWatermark: video info \n" + fprobeSession.getOutput());
+        }
+
+
         String command = "-i " + inputPath + " -i " + watermarkPath +
                 " -filter_complex \"[1]scale=50:25[newoverlay], " +
                 "[0][newoverlay]overlay=main_w-overlay_w-5:main_h-overlay_h-10\" " +
-                " -vb " + bit_rate[0] + " -vcodec mpeg4 " +
-                "-preset ultrafast -crf 0 " +
+                " -vb " + bit_rate[0] + " " +
+                "-preset slow " +
+                "-c:v mpeg4 " +
+                //"-qscale 0 " +
+                //"-crf 18 -preset veryslow " +
                 "-c:a copy " +
                 outputPath + outFileName;
 
@@ -220,10 +278,14 @@ public class Utils {
 
             }
 
-            //Deleting cacheFile from directory
+            /*Deleting cacheFile from directory
             File cacheFile = new File(inputPath);
             if (cacheFile.exists())
                 cacheFile.delete();
+
+             */
+
+
 
 
         });

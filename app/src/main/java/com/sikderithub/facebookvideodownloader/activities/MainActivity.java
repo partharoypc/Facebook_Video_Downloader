@@ -5,6 +5,7 @@ import static com.sikderithub.facebookvideodownloader.utils.Constants.downloadVi
 import static com.sikderithub.facebookvideodownloader.utils.Utils.RootDirectoryFacebook;
 import static com.sikderithub.facebookvideodownloader.utils.Utils.addWatermark;
 import static com.sikderithub.facebookvideodownloader.utils.Utils.createFileFolder;
+import static com.sikderithub.facebookvideodownloader.utils.Utils.downloadAndWatermark;
 import static com.sikderithub.facebookvideodownloader.utils.Utils.startDownload;
 
 import android.Manifest;
@@ -26,6 +27,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -73,16 +75,27 @@ public class MainActivity extends MyApp implements View.OnClickListener {
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
 
             if (downloadVideos.containsKey(id)) {
-                Log.d("service", "onReceive: download complete");
+                Log.d("receiver", "onReceive: download complete");
 
-                FVideo fVideo = downloadVideos.get(id);
-                Database.updateState(id, FVideo.PROCESSING);
+                FVideo fVideo = Database.getVideo(id);
+                if (fVideo.isWatermarked()){
+                    Database.updateState(id, FVideo.PROCESSING);
+                    Log.d(TAG, "onReceive: ");
 
-                assert fVideo != null;
-                addWatermark(context, fVideo,
-                        fVideo.getOutputPath(),
-                        Environment.getExternalStorageDirectory() +
-                                "/Download" + RootDirectoryFacebook);
+                    assert fVideo != null;
+                    addWatermark(context, fVideo,
+                            fVideo.getOutputPath(),
+                            Environment.getExternalStorageDirectory() +
+                                    "/Download" + RootDirectoryFacebook);
+                }else {
+                    Database.updateState(id, FVideo.COMPLETE);
+                    Database.setUri(id, Environment.getExternalStorageDirectory() +
+                            "/Download" + RootDirectoryFacebook + fVideo.getFileName());
+
+                    Log.d(TAG, "onReceive: download path " + Environment.getExternalStorageDirectory() +
+                            "/Download" + RootDirectoryFacebook + fVideo.getFileName());
+                }
+
 
 
                 downloadVideos.remove(id);
@@ -94,6 +107,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
     private TextView btnDownloaded, btnPest;
     private RecyclerView downloadList;
     private ImageView imageMenu;
+    private Switch swWatermark;
     private DrawerLayout drawerLayout;
     private NavigationView navigationView;
     private ClipboardManager clipBoard;
@@ -119,6 +133,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         btnDownloaded = findViewById(R.id.btn_download);
         btnPest = findViewById(R.id.btn_paste);
         downloadList = findViewById(R.id.rv_download_list);
+        swWatermark = findViewById(R.id.sw_watermark_enable);
 
         // Navigation Drawer
         drawerLayout = findViewById(R.id.drawer_layout);
@@ -418,8 +433,15 @@ public class MainActivity extends MyApp implements View.OnClickListener {
                 Log.d(TAG, "onPostExecute: " + videoUrl);
                 if (!videoUrl.equals("")) {
 
-                    //downloading the video using download manager
-                    FVideo fVideo = startDownload(videoUrl, activity, "facebook_" + System.currentTimeMillis() + ".mp4");
+                    FVideo fVideo;
+                   if (swWatermark.isChecked()){
+                       //downloading the video using download manager
+                       fVideo = downloadAndWatermark(activity, videoUrl,
+                               "facebook_" + System.currentTimeMillis() + ".mp4");
+                   }else {
+                       fVideo = startDownload(activity, videoUrl,
+                               "facebook_" + System.currentTimeMillis() + ".mp4");
+                   }
                     downloadVideos.put(fVideo.getDownloadId(), fVideo);
                     txtLink.setText("");
                 }
