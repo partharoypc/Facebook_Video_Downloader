@@ -21,12 +21,17 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.RatingBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,6 +44,15 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.ads.AdLoadCallback;
+import com.google.android.gms.ads.AdLoader;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.nativead.MediaView;
+import com.google.android.gms.ads.formats.UnifiedNativeAd;
+import com.google.android.gms.ads.initialization.InitializationStatus;
+import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
+import com.google.android.gms.ads.nativead.NativeAd;
+import com.google.android.gms.ads.nativead.NativeAdView;
 import com.google.android.material.navigation.NavigationView;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
@@ -46,6 +60,7 @@ import com.karumi.dexter.PermissionToken;
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 import com.sikderithub.facebookvideodownloader.Database;
+import com.sikderithub.facebookvideodownloader.DialogClass;
 import com.sikderithub.facebookvideodownloader.R;
 import com.sikderithub.facebookvideodownloader.adapters.ListAdapter;
 import com.sikderithub.facebookvideodownloader.models.FVideo;
@@ -144,7 +159,6 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         drawerLayout.addDrawerListener(actionBarDrawerToggle);
         actionBarDrawerToggle.syncState();
 
-
         downloadList.setLayoutManager(new LinearLayoutManager(this));
         //Item click listener for download list
         adapter = new ListAdapter(this, video -> {
@@ -230,6 +244,25 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         activity = this;
         clipBoard = (ClipboardManager) activity.getSystemService(CLIPBOARD_SERVICE);
         pasteText();
+    }
+
+    boolean doubleBackToExitPressedOnce = false;
+    @Override
+    public void onBackPressed() {
+
+        if (doubleBackToExitPressedOnce) {
+            DialogClass dialogClass = new DialogClass(MainActivity.this);
+            dialogClass.show();
+        }
+
+        this.doubleBackToExitPressedOnce = true;
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+
+            @Override
+            public void run() {
+                doubleBackToExitPressedOnce=false;
+            }
+        }, 2000);
     }
 
     @Override
@@ -397,7 +430,6 @@ public class MainActivity extends MyApp implements View.OnClickListener {
                 }
         }
     }
-
 
     class callFacebookData extends AsyncTask<String, Void, Document> {
 

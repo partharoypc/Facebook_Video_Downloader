@@ -14,5 +14,9 @@
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
 
+    <!-- Sample AdMob app ID: ca-app-pub-3940256099942544~3347511713 -->
+    <string name="admob_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="admob_native_ad_id">ca-app-pub-3940256099942544/2247696110</string>
+
 
 </resources>
