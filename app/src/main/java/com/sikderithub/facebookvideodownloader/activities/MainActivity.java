@@ -11,6 +11,7 @@ import static com.sikderithub.facebookvideodownloader.utils.Utils.startDownload;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Dialog;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
@@ -18,47 +19,35 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.RatingBar;
+import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.gms.ads.AdLoadCallback;
 import com.google.android.gms.ads.AdLoader;
+import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.nativead.MediaView;
-import com.google.android.gms.ads.formats.UnifiedNativeAd;
-import com.google.android.gms.ads.initialization.InitializationStatus;
-import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.google.android.gms.ads.nativead.NativeAdView;
 import com.google.android.material.navigation.NavigationView;
@@ -101,7 +90,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
                 Log.d("receiver", "onReceive: download complete");
 
                 FVideo fVideo = Database.getVideo(id);
-                if (fVideo.isWatermarked()){
+                if (fVideo.isWatermarked()) {
                     Database.updateState(id, FVideo.PROCESSING);
                     Log.d(TAG, "onReceive: ");
 
@@ -110,7 +99,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
                             fVideo.getOutputPath(),
                             Environment.getExternalStorageDirectory() +
                                     "/Download" + RootDirectoryFacebook);
-                }else {
+                } else {
                     String videoPath = Environment.getExternalStorageDirectory() +
                             "/Download" + RootDirectoryFacebook + fVideo.getFileName();
 
@@ -125,12 +114,12 @@ public class MainActivity extends MyApp implements View.OnClickListener {
                 }
 
 
-
                 downloadVideos.remove(id);
             }
         }
     };
     public ActionBarDrawerToggle actionBarDrawerToggle;
+    boolean doubleBackToExitPressedOnce = false;
     private EditText txtLink;
     private TextView btnDownloaded, btnPest;
     private RecyclerView downloadList;
@@ -234,7 +223,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
      * check user permission to read and write in the external strage
      * if permission not granted then it takes user permission
      */
-   // @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    // @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     private void checkPermission() {
         Dexter.withContext(this)
                 .withPermissions(
@@ -253,23 +242,6 @@ public class MainActivity extends MyApp implements View.OnClickListener {
                     public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {/* ... */}
                 }).check();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ){
-            Dexter.withContext(this)
-                    .withPermissions(
-                            Manifest.permission.POST_NOTIFICATIONS
-                    ).withListener(new MultiplePermissionsListener() {
-                        @Override
-                        public void onPermissionsChecked(MultiplePermissionsReport report) {
-                            if (!report.areAllPermissionsGranted()) {
-                                checkPermission();
-                            }
-                        }
-
-                        @Override
-                        public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {/* ... */}
-                    }).check();
-        }
-
     }
 
     @Override
@@ -280,12 +252,14 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         pasteText();
     }
 
-    boolean doubleBackToExitPressedOnce = false;
     @Override
     public void onBackPressed() {
 
+        createExitDialog();
+
+        /*
         if (doubleBackToExitPressedOnce) {
-            dialogClass.show();
+            createExitDialog();
 
         }
 
@@ -297,6 +271,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
                 doubleBackToExitPressedOnce=false;
             }
         }, 1000);
+        */
     }
 
     @Override
@@ -306,6 +281,91 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         }
         return super.onOptionsItemSelected(item);
 
+    }
+
+    private void createExitDialog() {
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.exit_dialog);
+
+        Button exit = dialog.findViewById(R.id.btn_exit);
+        Button cancel = dialog.findViewById(R.id.btn_cancel);
+
+        exit.setOnClickListener(v -> finish());
+        cancel.setOnClickListener(v -> dialog.dismiss());
+
+        MobileAds.initialize(getApplicationContext());
+        final AdLoader adLoader = new AdLoader.Builder(getApplicationContext(), getString(R.string.admob_native_ad_id))
+                .forNativeAd(nativeAd -> {
+                    NativeAdView nativeAdView = (NativeAdView) getLayoutInflater().inflate(R.layout.native_ad_layout, null);
+                    mapUnifiedNativeAdToLayout(nativeAd, nativeAdView);
+                    RelativeLayout nativeAdLayout = dialog.findViewById(R.id.ad_native);
+                    nativeAdLayout.removeAllViews();
+                    nativeAdLayout.addView(nativeAdView);
+
+
+                }).build();
+        adLoader.loadAd(new AdRequest.Builder().build());
+
+        dialog.show();
+
+        /*new Thread(){
+            @Override
+            public void run() {
+                MobileAds.initialize(getApplicationContext());
+                final AdLoader adLoader = new AdLoader.Builder(getApplicationContext(), getString(R.string.admob_native_ad_id))
+                        .forNativeAd(nativeAd -> {
+                            NativeAdView nativeAdView = (NativeAdView) getLayoutInflater().inflate(R.layout.native_ad_layout, null);
+                            mapUnifiedNativeAdToLayout(nativeAd, nativeAdView);
+
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            handler.post(()->{
+                                RelativeLayout nativeAdLayout = dialog.findViewById(R.id.ad_native);
+                                nativeAdLayout.removeAllViews();
+                                nativeAdLayout.addView(nativeAdView);
+                            });
+
+                        }).build();
+
+                new Handler(Looper.getMainLooper()).post(()->{
+                    adLoader.loadAd(new AdRequest.Builder().build());
+                });
+
+
+            }
+        }.start();
+
+        dialog.show();*/
+    }
+
+    private void mapUnifiedNativeAdToLayout(NativeAd adFromGoogle, NativeAdView myAdView) {
+        MediaView mediaView = myAdView.findViewById(R.id.ad_media);
+        myAdView.setMediaView(mediaView);
+
+        myAdView.setHeadlineView(myAdView.findViewById(R.id.ad_title));
+        myAdView.setBodyView(myAdView.findViewById(R.id.ad_details));
+        myAdView.setCallToActionView(myAdView.findViewById(R.id.btn_action));
+        myAdView.setIconView(myAdView.findViewById(R.id.ad_icon));
+
+        ((TextView) myAdView.getHeadlineView()).setText(adFromGoogle.getHeadline());
+
+        if (adFromGoogle.getBody() == null) {
+            myAdView.getBodyView().setVisibility(View.GONE);
+        } else {
+            ((TextView) myAdView.getBodyView()).setText(adFromGoogle.getBody());
+        }
+
+        if (adFromGoogle.getCallToAction() == null) {
+            myAdView.getCallToActionView().setVisibility(View.GONE);
+        } else {
+            ((Button) myAdView.getCallToActionView()).setText(adFromGoogle.getCallToAction());
+        }
+
+        if (adFromGoogle.getIcon() == null) {
+            myAdView.getIconView().setVisibility(View.GONE);
+        } else {
+            ((ImageView) myAdView.getIconView()).setImageDrawable(adFromGoogle.getIcon().getDrawable());
+        }
+        myAdView.setNativeAd(adFromGoogle);
     }
 
     /**
@@ -319,7 +379,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
 
         btnDownloaded.setOnClickListener(this);
 
-        dialogClass = new DialogClass(MainActivity.this);
+        //dialogClass = new DialogClass(MainActivity.this);
 
         //Handel the navigation view click
         navigationView.setNavigationItemSelectedListener(item -> {
@@ -502,14 +562,14 @@ public class MainActivity extends MyApp implements View.OnClickListener {
                 if (!videoUrl.equals("")) {
 
                     FVideo fVideo;
-                   if (swWatermark.isChecked()){
-                       //downloading the video using download manager
-                       fVideo = downloadAndWatermark(activity, videoUrl,
-                               "facebook_" + System.currentTimeMillis() + ".mp4");
-                   }else {
-                       fVideo = startDownload(activity, videoUrl,
-                               "facebook_" + System.currentTimeMillis() + ".mp4");
-                   }
+                    if (swWatermark.isChecked()) {
+                        //downloading the video using download manager
+                        fVideo = downloadAndWatermark(activity, videoUrl,
+                                "facebook_" + System.currentTimeMillis() + ".mp4");
+                    } else {
+                        fVideo = startDownload(activity, videoUrl,
+                                "facebook_" + System.currentTimeMillis() + ".mp4");
+                    }
                     downloadVideos.put(fVideo.getDownloadId(), fVideo);
                     txtLink.setText("");
                 }
