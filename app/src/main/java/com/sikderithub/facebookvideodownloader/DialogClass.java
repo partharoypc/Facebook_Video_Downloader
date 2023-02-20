@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
@@ -39,34 +41,39 @@ public class DialogClass extends Dialog implements View.OnClickListener {
 
         setContentView(R.layout.exit_dialog);
 
-        exit = (Button) findViewById(R.id.btn_exit);
-        cancel = (Button) findViewById(R.id.btn_cancel);
+        exit = findViewById(R.id.btn_exit);
+        cancel = findViewById(R.id.btn_cancel);
 
         exit.setOnClickListener(this);
         cancel.setOnClickListener(this);
 
-        /*RelativeLayout ad = findViewById(R.id.ad_native) ;
-        ad.removeAllViews();
-        ad.addView(getLayoutInflater().inflate(R.layout.native_ad_layout, null));*/
+        new Thread(){
+            @Override
+            public void run() {
+                MobileAds.initialize(activity);
+                final AdLoader adLoader = new AdLoader.Builder(activity, activity.getString(R.string.admob_native_ad_id))
+                        .forNativeAd(nativeAd -> {
+                            NativeAdView nativeAdView = (NativeAdView) getLayoutInflater().inflate(R.layout.native_ad_layout, null);
+                            mapUnifiedNativeAdToLayout(nativeAd, nativeAdView);
+
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            handler.post(()->{
+                                RelativeLayout nativeAdLayout = findViewById(R.id.ad_native);
+                                nativeAdLayout.removeAllViews();
+                                nativeAdLayout.addView(nativeAdView);
 
 
+                            });
 
-        MobileAds.initialize(activity);
+                        }).build();
 
-        AdLoader adLoader = new AdLoader.Builder(activity, activity.getString(R.string.admob_native_ad_id))
-                .forNativeAd(new NativeAd.OnNativeAdLoadedListener() {
-                    @Override
-                    public void onNativeAdLoaded(@NonNull NativeAd nativeAd) {
-                        NativeAdView nativeAdView = (NativeAdView) getLayoutInflater().inflate(R.layout.native_ad_layout, null);
-                        mapUnifiedNativeAdToLayout(nativeAd, nativeAdView);
+                new Handler(Looper.getMainLooper()).post(()->{
+                    adLoader.loadAd(new AdRequest.Builder().build());
+                });
 
-                        RelativeLayout nativeAdLayout = findViewById(R.id.ad_native);
-                        nativeAdLayout.removeAllViews();
-                        nativeAdLayout.addView(nativeAdView);
-                    }
-                }).build();
 
-        adLoader.loadAd(new AdRequest.Builder().build());
+            }
+        }.start();
 
     }
 

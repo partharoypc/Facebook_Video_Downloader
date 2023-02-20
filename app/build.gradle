@@ -1,15 +1,16 @@
 plugins {
     id 'com.android.application'
+    id 'com.google.gms.google-services'
 }
 
 android {
     namespace 'com.sikderithub.facebookvideodownloader'
-    compileSdk 32
+    compileSdk 33
 
     defaultConfig {
         applicationId "com.sikderithub.facebookvideodownloader"
         minSdk 24
-        targetSdk 32
+        targetSdk 33
         versionCode 1
         versionName "1.0"
 
@@ -63,10 +64,13 @@ dependencies {
     implementation 'androidx.navigation:navigation-fragment:2.4.1'
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.5.1'
     implementation 'androidx.navigation:navigation-ui:2.4.1'
+    implementation 'com.google.firebase:firebase-messaging:23.0.3'
+    implementation 'com.google.firebase:firebase-inappmessaging-display:20.3.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.4'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
     implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.24'
+    implementation 'com.google.code.gson:gson:2.8.9'
 
     implementation 'com.karumi:dexter:6.2.3'
     implementation 'org.jsoup:jsoup:1.12.1'

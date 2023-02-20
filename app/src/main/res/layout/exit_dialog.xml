@@ -22,7 +22,7 @@
             android:backgroundTint="@color/btn_background"
             android:text="Exit"
             android:textAllCaps="false"
-            android:textColor="@color/blue_200"
+            android:textColor="@color/black_500"
             android:textStyle="bold" />
 
         <Button
@@ -32,7 +32,7 @@
             android:layout_marginStart="20dp"
             android:backgroundTint="@color/btn_background"
             android:text="Cancel"
-            android:textColor="@color/blue_200"
+            android:textColor="@color/black_500"
             android:textStyle="bold" />
     </LinearLayout>
 

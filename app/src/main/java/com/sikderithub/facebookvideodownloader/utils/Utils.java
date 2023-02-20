@@ -32,6 +32,7 @@ import com.sikderithub.facebookvideodownloader.models.FVideo;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 
 
@@ -309,7 +310,11 @@ public class Utils {
         {
             if (mediaMetadataRetriever != null)
             {
-                mediaMetadataRetriever.release();
+                try {
+                    mediaMetadataRetriever.release();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
         return bitmap;

@@ -60,7 +60,7 @@
             android:id="@+id/btn_action"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/blue_200"
+            android:textColor="@color/black_500"
             android:backgroundTint="@color/btn_background" />
     </LinearLayout>
 

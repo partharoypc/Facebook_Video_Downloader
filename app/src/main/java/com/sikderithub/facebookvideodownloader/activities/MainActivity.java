@@ -18,9 +18,11 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -38,8 +40,12 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -228,11 +234,13 @@ public class MainActivity extends MyApp implements View.OnClickListener {
      * check user permission to read and write in the external strage
      * if permission not granted then it takes user permission
      */
+   // @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     private void checkPermission() {
         Dexter.withContext(this)
                 .withPermissions(
                         Manifest.permission.READ_EXTERNAL_STORAGE,
                         Manifest.permission.WRITE_EXTERNAL_STORAGE
+                        //Manifest.permission.POST_NOTIFICATIONS
                 ).withListener(new MultiplePermissionsListener() {
                     @Override
                     public void onPermissionsChecked(MultiplePermissionsReport report) {
@@ -244,6 +252,24 @@ public class MainActivity extends MyApp implements View.OnClickListener {
                     @Override
                     public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {/* ... */}
                 }).check();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ){
+            Dexter.withContext(this)
+                    .withPermissions(
+                            Manifest.permission.POST_NOTIFICATIONS
+                    ).withListener(new MultiplePermissionsListener() {
+                        @Override
+                        public void onPermissionsChecked(MultiplePermissionsReport report) {
+                            if (!report.areAllPermissionsGranted()) {
+                                checkPermission();
+                            }
+                        }
+
+                        @Override
+                        public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {/* ... */}
+                    }).check();
+        }
+
     }
 
     @Override
