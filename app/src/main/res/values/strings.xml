@@ -17,6 +17,9 @@
     <!-- Sample AdMob app ID: ca-app-pub-3940256099942544~3347511713 -->
     <string name="admob_id">ca-app-pub-3940256099942544~3347511713</string>
     <string name="admob_native_ad_id">ca-app-pub-3940256099942544/2247696110</string>
+    <string name="downloading">Downloading...</string>
+    <string name="processing">Processing...</string>
+    <string name="complete">Complete</string>
 
 
 </resources>

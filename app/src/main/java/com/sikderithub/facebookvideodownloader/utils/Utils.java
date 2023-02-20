@@ -10,8 +10,10 @@ import android.app.DownloadManager;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
@@ -30,6 +32,7 @@ import com.sikderithub.facebookvideodownloader.models.FVideo;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.HashMap;
 
 
 public class Utils {
@@ -229,14 +232,6 @@ public class Utils {
             Log.d(TAG, "apply: error!!!");
         }
 
-
-        String commandInfo = inputPath;
-        FFprobeSession fprobeSession = FFprobeKit.execute(commandInfo);
-        if (ReturnCode.isSuccess(fprobeSession.getReturnCode())){
-            Log.d(TAG, "addWatermark: video info \n" + fprobeSession.getOutput());
-        }
-
-
         String command = "-i " + inputPath + " -i " + watermarkPath +
                 " -filter_complex \"[1]scale=50:25[newoverlay], " +
                 "[0][newoverlay]overlay=main_w-overlay_w-5:main_h-overlay_h-10\" " +
@@ -264,6 +259,8 @@ public class Utils {
                     String path = outputPath + outFileName;
                     Log.d(TAG, "addWatermark: uri" + path);
                     Database.setUri(video.getDownloadId(), path);
+                    Database.setThumbnail(video.getDownloadId(), getThumbnail(path));
+
                 });
 
             } else if (ReturnCode.isCancel(session.getReturnCode())) {
@@ -290,6 +287,32 @@ public class Utils {
 
         });
 
+    }
+
+    public static Bitmap getThumbnail(String filePath){
+        Bitmap bitmap = null;
+        MediaMetadataRetriever mediaMetadataRetriever = null;
+        try
+        {
+            mediaMetadataRetriever = new MediaMetadataRetriever();
+            //mediaMetadataRetriever.setDataSource(filePath, new HashMap<String, String>());
+            mediaMetadataRetriever.setDataSource(filePath);
+            bitmap = mediaMetadataRetriever.getFrameAtTime(1, MediaMetadataRetriever.OPTION_CLOSEST);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            Log.d(TAG, "getThumbnail: file not found");
+            Log.d(TAG, "getThumbnail: url " + filePath);
+        }
+        finally
+        {
+            if (mediaMetadataRetriever != null)
+            {
+                mediaMetadataRetriever.release();
+            }
+        }
+        return bitmap;
     }
 
 }

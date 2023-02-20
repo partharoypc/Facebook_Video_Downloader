@@ -66,7 +66,7 @@ public class DialogClass extends Dialog implements View.OnClickListener {
                     }
                 }).build();
 
-        adLoader.loadAds(new AdRequest.Builder().build(), 3);
+        adLoader.loadAd(new AdRequest.Builder().build());
 
     }
 

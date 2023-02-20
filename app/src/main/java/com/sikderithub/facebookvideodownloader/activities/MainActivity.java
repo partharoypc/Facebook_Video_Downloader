@@ -6,6 +6,7 @@ import static com.sikderithub.facebookvideodownloader.utils.Utils.RootDirectoryF
 import static com.sikderithub.facebookvideodownloader.utils.Utils.addWatermark;
 import static com.sikderithub.facebookvideodownloader.utils.Utils.createFileFolder;
 import static com.sikderithub.facebookvideodownloader.utils.Utils.downloadAndWatermark;
+import static com.sikderithub.facebookvideodownloader.utils.Utils.getThumbnail;
 import static com.sikderithub.facebookvideodownloader.utils.Utils.startDownload;
 
 import android.Manifest;
@@ -17,6 +18,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -103,9 +105,14 @@ public class MainActivity extends MyApp implements View.OnClickListener {
                             Environment.getExternalStorageDirectory() +
                                     "/Download" + RootDirectoryFacebook);
                 }else {
+                    String videoPath = Environment.getExternalStorageDirectory() +
+                            "/Download" + RootDirectoryFacebook + fVideo.getFileName();
+
                     Database.updateState(id, FVideo.COMPLETE);
-                    Database.setUri(id, Environment.getExternalStorageDirectory() +
-                            "/Download" + RootDirectoryFacebook + fVideo.getFileName());
+                    Database.setUri(id, videoPath);
+
+                    Bitmap thumbnail = getThumbnail(videoPath);
+                    Database.setThumbnail(id, thumbnail);
 
                     Log.d(TAG, "onReceive: download path " + Environment.getExternalStorageDirectory() +
                             "/Download" + RootDirectoryFacebook + fVideo.getFileName());
@@ -127,6 +134,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
     private NavigationView navigationView;
     private ClipboardManager clipBoard;
     private MainActivity activity;
+    private DialogClass dialogClass;
 
     /**
      * this function update the listAdapter data form the database
@@ -251,8 +259,8 @@ public class MainActivity extends MyApp implements View.OnClickListener {
     public void onBackPressed() {
 
         if (doubleBackToExitPressedOnce) {
-            DialogClass dialogClass = new DialogClass(MainActivity.this);
             dialogClass.show();
+
         }
 
         this.doubleBackToExitPressedOnce = true;
@@ -262,7 +270,7 @@ public class MainActivity extends MyApp implements View.OnClickListener {
             public void run() {
                 doubleBackToExitPressedOnce=false;
             }
-        }, 2000);
+        }, 1000);
     }
 
     @Override
@@ -284,6 +292,8 @@ public class MainActivity extends MyApp implements View.OnClickListener {
         btnPest.setOnClickListener(this);
 
         btnDownloaded.setOnClickListener(this);
+
+        dialogClass = new DialogClass(MainActivity.this);
 
         //Handel the navigation view click
         navigationView.setNavigationItemSelectedListener(item -> {

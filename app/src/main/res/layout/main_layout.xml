@@ -87,6 +87,6 @@
         android:layout_height="match_parent"
         android:layout_below="@id/rl_download_layout"
         android:layout_marginTop="16dp"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="16dp" />
 
 </RelativeLayout>

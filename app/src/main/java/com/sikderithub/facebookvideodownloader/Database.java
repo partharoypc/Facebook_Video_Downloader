@@ -1,5 +1,6 @@
 package com.sikderithub.facebookvideodownloader;
 
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.util.Log;
 
@@ -74,6 +75,20 @@ public class Database {
                 Log.d(TAG, "setUri: video found video title " + video.getFileName());
                 Log.d(TAG, "setUri: set uri " + uri);
                 video.setFileUri(uri);
+            }
+        }
+        Paper.book().write(KEY_VIDEOS, videos);
+        MainActivity.updateListData();
+    }
+
+    public static void setThumbnail(long downloadId, Bitmap thumbnail) {
+        ArrayList<FVideo> videos = Paper.book().read(KEY_VIDEOS, new ArrayList<>());
+        assert videos != null;
+        for (FVideo video : videos) {
+            if (video.getDownloadId() == downloadId) {
+                Log.d(TAG, "setThumbnail: video found video title " + video.getFileName());
+                Log.d(TAG, "setThumbnail: thumbnail set ");
+                video.setThumbnail(thumbnail);
             }
         }
         Paper.book().write(KEY_VIDEOS, videos);

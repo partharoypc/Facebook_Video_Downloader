@@ -6,10 +6,11 @@
     android:layout_height="wrap_content">
 
     <ImageView
-        android:id="@+id/iv_image_icon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:scaleType="center"
+        android:id="@+id/iv_thumbnail"
+        android:layout_width="75dp"
+        android:layout_height="75dp"
+        android:scaleType="centerCrop"
+        android:padding="16dp"
         android:src="@drawable/ic_video_file"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -17,9 +18,9 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="@+id/iv_image_icon"
-        app:layout_constraintStart_toEndOf="@+id/iv_image_icon"
-        app:layout_constraintTop_toTopOf="@+id/iv_image_icon">
+        app:layout_constraintBottom_toBottomOf="@+id/iv_thumbnail"
+        app:layout_constraintStart_toEndOf="@+id/iv_thumbnail"
+        app:layout_constraintTop_toTopOf="@+id/iv_thumbnail">
 
         <TextView
             android:id="@+id/tv_video_title"

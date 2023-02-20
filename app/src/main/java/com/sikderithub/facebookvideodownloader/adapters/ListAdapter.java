@@ -3,10 +3,10 @@ package com.sikderithub.facebookvideodownloader.adapters;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,8 +23,8 @@ import java.util.List;
 public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ListViewHolder> {
 
     private final ItemClickListener itemClickListener;
-    private List<FVideo> videos;
     private final Context context;
+    private List<FVideo> videos;
 
     public ListAdapter(Context context, ItemClickListener itemClickListener) {
         this.itemClickListener = itemClickListener;
@@ -43,17 +43,24 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ListViewHolder
     public void onBindViewHolder(@NonNull ListViewHolder holder, int position) {
         FVideo video = videos.get(position);
 
+
+        if (video.getState() == FVideo.COMPLETE) {
+            holder.ivThumbnail.setImageBitmap(video.getThumbnail());
+        } else {
+            holder.ivThumbnail.setImageResource(R.drawable.ic_video_file);
+        }
+
         holder.tvVideoTitle.setText(video.getFileName());
 
         switch (video.getState()) {
             case FVideo.DOWNLOADING:
-                holder.tvVideoState.setText("Downloading...");
+                holder.tvVideoState.setText(R.string.downloading);
                 break;
             case FVideo.PROCESSING:
-                holder.tvVideoState.setText("Processing...");
+                holder.tvVideoState.setText(R.string.processing);
                 break;
             case FVideo.COMPLETE:
-                holder.tvVideoState.setText("Complete");
+                holder.tvVideoState.setText(R.string.complete);
         }
     }
 
@@ -77,12 +84,14 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ListViewHolder
             implements View.OnClickListener, View.OnLongClickListener {
         TextView tvVideoTitle;
         TextView tvVideoState;
+        ImageView ivThumbnail;
 
         public ListViewHolder(@NonNull View itemView) {
             super(itemView);
 
             tvVideoTitle = itemView.findViewById(R.id.tv_video_title);
             tvVideoState = itemView.findViewById(R.id.tv_video_state);
+            ivThumbnail = itemView.findViewById(R.id.iv_thumbnail);
 
             itemView.setOnClickListener(this);
             itemView.setOnLongClickListener(this);
@@ -105,25 +114,16 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.ListViewHolder
                     new AlertDialog.Builder(context)
                             .setTitle("Want to delete this video?")
                             .setMessage("This will delete video form your memory")
-                            .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
+                            .setPositiveButton("Yes", (dialog, which) -> {
 
-                                    boolean isDeleted = file.delete();
-                                    if (isDeleted)
-                                        Toast.makeText(context, "Video deleted", Toast.LENGTH_SHORT).show();
-                                    Database.deleteAVideo(video.getDownloadId());
-                                }
+                                boolean isDeleted = file.delete();
+                                if (isDeleted)
+                                    Toast.makeText(context, "Video deleted", Toast.LENGTH_SHORT).show();
+                                Database.deleteAVideo(video.getDownloadId());
                             })
-                            .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.cancel();
-                                }
-                            })
+                            .setNegativeButton("No", (dialog, which) -> dialog.cancel())
                             .show();
-                }
-                else {
+                } else {
                     Database.deleteAVideo((video.getDownloadId()));
                 }
             }
