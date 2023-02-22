@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center_vertical"
-    tools:context=".SplashActivity"
+    tools:context=".activities.SplashActivity"
     android:background="@color/white">
 
     <pl.droidsonroids.gif.GifImageView
