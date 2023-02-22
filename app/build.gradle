@@ -22,7 +22,7 @@ android {
         abi {
 
             // Enables building multiple APKs per ABI.
-            enable true
+            enable gradle.startParameter.taskNames.any { it.contains("Release") }
 
             // By default all ABIs are included, so use reset() and include to specify that you only
             // want APKs for x86 and x86_64.
@@ -83,5 +83,7 @@ dependencies {
 
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0'
     implementation 'com.google.android.gms:play-services-ads:21.5.0'
+
+    implementation 'com.guolindev.permissionx:permissionx:1.7.1'
 
 }

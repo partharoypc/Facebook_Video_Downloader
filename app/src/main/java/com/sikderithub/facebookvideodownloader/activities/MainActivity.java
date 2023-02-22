@@ -22,6 +22,7 @@ import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -56,6 +57,13 @@ import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
+import com.permissionx.guolindev.PermissionX;
+import com.permissionx.guolindev.callback.ExplainReasonCallback;
+import com.permissionx.guolindev.callback.ForwardToSettingsCallback;
+import com.permissionx.guolindev.callback.RequestCallback;
+import com.permissionx.guolindev.request.ExplainScope;
+import com.permissionx.guolindev.request.ForwardScope;
+import com.sikderithub.facebookvideodownloader.BuildConfig;
 import com.sikderithub.facebookvideodownloader.Database;
 import com.sikderithub.facebookvideodownloader.DialogClass;
 import com.sikderithub.facebookvideodownloader.R;
@@ -225,22 +233,53 @@ public class MainActivity extends MyApp implements View.OnClickListener {
      */
     // @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     private void checkPermission() {
-        Dexter.withContext(this)
-                .withPermissions(
-                        Manifest.permission.READ_EXTERNAL_STORAGE,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                        //Manifest.permission.POST_NOTIFICATIONS
-                ).withListener(new MultiplePermissionsListener() {
-                    @Override
-                    public void onPermissionsChecked(MultiplePermissionsReport report) {
-                        if (!report.areAllPermissionsGranted()) {
-                            checkPermission();
-                        }
-                    }
 
-                    @Override
-                    public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {/* ... */}
-                }).check();
+        if(Build.VERSION.SDK_INT<Build.VERSION_CODES.R){
+            PermissionX.init(this)
+                    .permissions(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    .onExplainRequestReason(new ExplainReasonCallback() {
+                        @Override
+                        public void onExplainReason(@NonNull ExplainScope scope, @NonNull List<String> deniedList) {
+                            scope.showRequestReasonDialog(deniedList, "Core fundamental are based on these permissions", "OK", "Cancel");
+                        }
+                    }).onForwardToSettings(new ForwardToSettingsCallback() {
+                        @Override
+                        public void onForwardToSettings(@NonNull ForwardScope scope, @NonNull List<String> deniedList) {
+                            scope.showForwardToSettingsDialog(deniedList, "You need to allow necessary permissions in Settings manually", "OK", "Cancel");
+                        }
+                    }).request(new RequestCallback() {
+                        @Override
+                        public void onResult(boolean allGranted, @NonNull List<String> grantedList, @NonNull List<String> deniedList) {
+                            if (allGranted) {
+                                Toast.makeText(MainActivity.this, "All permissions are granted", Toast.LENGTH_LONG).show();
+                            } else {
+                                Toast.makeText(MainActivity.this, "These permissions are denied: $deniedList", Toast.LENGTH_LONG).show();
+                            }
+                        }
+                    });
+        }else{
+
+        }
+
+
+
+
+//        Dexter.withContext(this)
+//                .withPermissions(
+//                        Manifest.permission.READ_EXTERNAL_STORAGE,
+//                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+//                        //Manifest.permission.POST_NOTIFICATIONS
+//                ).withListener(new MultiplePermissionsListener() {
+//                    @Override
+//                    public void onPermissionsChecked(MultiplePermissionsReport report) {
+//                        if (!report.areAllPermissionsGranted()) {
+//                            checkPermission();
+//                        }
+//                    }
+//
+//                    @Override
+//                    public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {/* ... */}
+//                }).check();
 
     }
 
