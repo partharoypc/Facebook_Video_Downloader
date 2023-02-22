@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "701107108765",
+    "project_id": "facebook-video-downloade-f9be7",
+    "storage_bucket": "facebook-video-downloade-f9be7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:701107108765:android:261e846d00c2468d2ecd74",
+        "android_client_info": {
+          "package_name": "com.sikderithub.facebookvideodownloader"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "701107108765-7igonpjq82kavtb3dc680cqh3e41sv67.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvmohSqvzGVTxeo4lkas0L6oBQcYsrJ7o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "701107108765-7igonpjq82kavtb3dc680cqh3e41sv67.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
